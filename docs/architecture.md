@@ -73,7 +73,7 @@ The startup scripts are deliberately thin wrappers:
 - `config/colima.env` defines the Colima profile and VM defaults
 - `agent-context/runtime.env` defines local runtime paths such as `WORKSPACE_ROOT`
 - `scripts/destroy` stops the VM profile
-- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, installs Codex in the VM, links the workspace instruction file, and syncs Codex skills
+- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, updates Codex in the VM to the configured version, links the workspace instruction file, and syncs Codex skills
 - `scripts/agent` launches Codex in the VM with `workspace-write`
 
 This keeps shared VM defaults in config, private runtime state in

@@ -45,7 +45,9 @@ Colima VM if needed, installs Codex and GitHub CLI in the VM, and links
 `AGENTS.md` at `WORKSPACE_ROOT` to the private instruction file. If the
 configured mount set differs from the running Colima profile, it prompts before
 restarting Colima to apply the change. It also syncs custom skills into
-`~/.codex/skills/`.
+`~/.codex/skills/`. Set `CODEX_VERSION=latest` in
+`config/colima.env` to update to the newest Codex release on each run, or pin a
+specific version such as `0.114.0` to hold it steady.
 
 ## Notes
 

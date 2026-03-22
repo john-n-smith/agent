@@ -88,7 +88,12 @@ if [[ ! -f "${agent_context_agents}" ]]; then
   exit 1
 fi
 
-printf "Installing Codex %s in Colima profile %s\n" "${CODEX_VERSION}" "${COLIMA_PROFILE}"
+requested_version="${CODEX_VERSION}"
+if [[ "${requested_version}" == "latest" ]]; then
+  printf "Resolving latest Codex release for Colima profile %s\n" "${COLIMA_PROFILE}"
+else
+  printf "Installing Codex %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
+fi
 
 agent_context_agents_b64=$(base64 < "${agent_context_agents}" | tr -d '\n')
 host_uid=$(id -u)
@@ -98,7 +103,7 @@ cd "${WORKSPACE_ROOT}"
 colima ssh -p "${COLIMA_PROFILE}" -- /usr/bin/bash -lc "
 set -euo pipefail
 
-version='${CODEX_VERSION}'
+requested_version='${requested_version}'
 agent_context_agents_path='${agent_context_agents}'
 agent_context_skills_dir='${agent_context_skills_dir}'
 agent_context_agents_b64='${agent_context_agents_b64}'
@@ -127,8 +132,6 @@ case \"\${arch}\" in
     ;;
 esac
 
-url=\"https://github.com/openai/codex/releases/download/rust-v\${version}/\${archive_name}\"
-
 mkdir -p \"\${agent_bin_dir}\"
 current_version=\"\"
 if [[ -x \"\${codex_path}\" ]]; then
@@ -140,6 +143,20 @@ if ! command -v make >/dev/null 2>&1 || ! command -v rg >/dev/null 2>&1 || ! com
   sudo apt-get install -y gh make ripgrep
 fi
 
+version=\"\${requested_version}\"
+if [[ \"\${version}\" == \"latest\" ]]; then
+  latest_url=\$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/openai/codex/releases/latest)
+  version=\${latest_url##*/}
+  version=\${version#rust-v}
+  if [[ -z \"\${version}\" || \"\${version}\" == \"latest\" ]]; then
+    echo \"Failed to resolve the latest Codex release version\" >&2
+    exit 1
+  fi
+fi
+
+url=\"https://github.com/openai/codex/releases/download/rust-v\${version}/\${archive_name}\"
+
+echo \"Target Codex version: \${version}\"
 if [[ \"\${current_version}\" != \"\${version}\" ]]; then
   curl -fsSL \"\${url}\" -o \"\${tmpdir}/codex.tar.gz\"
   tar -xzf \"\${tmpdir}/codex.tar.gz\" -C \"\${tmpdir}\"
@@ -164,4 +181,4 @@ fi
 sudo ln -sfn \"\${agent_context_agents_path}\" \"\${workspace_root}/AGENTS.md\"
 "
 
-printf "Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n" "${CODEX_VERSION}" "${WORKSPACE_ROOT}"
+printf "Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n" "${requested_version}" "${WORKSPACE_ROOT}"
