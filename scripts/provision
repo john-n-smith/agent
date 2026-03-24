@@ -14,7 +14,29 @@ require_var COLIMA_FORWARD_SSH_AGENT
 require_var COLIMA_NETWORK_ADDRESS
 require_var COLIMA_PROFILE
 require_var CODEX_VERSION
+
+persisted_bootstrap_env=false
+
+if [[ -z "${HARBOUR_CONTEXT_HOST_PATH:-}" ]]; then
+  printf "Enter the path to your private harbour-context: "
+  read -r HARBOUR_CONTEXT_HOST_PATH
+  if [[ -z "${HARBOUR_CONTEXT_HOST_PATH}" ]]; then
+    printf "HARBOUR_CONTEXT_HOST_PATH is required.\n" >&2
+    exit 1
+  fi
+  persisted_bootstrap_env=true
+fi
+
 require_var HARBOUR_CONTEXT_HOST_PATH
+if [[ ! -d "${HARBOUR_CONTEXT_HOST_PATH}" ]]; then
+  printf "%s does not exist on the host.\n" "${HARBOUR_CONTEXT_HOST_PATH}" >&2
+  exit 1
+fi
+if [[ "${persisted_bootstrap_env}" == "true" ]]; then
+  persist_bootstrap_env
+  printf "Saved HARBOUR_CONTEXT_HOST_PATH to %s.\n" "${BOOTSTRAP_ENV}"
+fi
+load_runtime_env
 require_var WORKSPACE_ROOT
 
 cmd=(colima start "${COLIMA_PROFILE}"
