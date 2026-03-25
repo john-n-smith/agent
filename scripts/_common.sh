@@ -5,14 +5,14 @@ set -euo pipefail
 SCRIPT_DIR=${0:A:h}
 PROJECT_ROOT=${SCRIPT_DIR:h}
 COLIMA_ENV="${PROJECT_ROOT}/config/colima.env"
-BOOTSTRAP_ENV_DIR="${HOME}/.config/agent-harbour"
-BOOTSTRAP_ENV="${BOOTSTRAP_ENV_DIR}/env"
+HARBOUR_ENV_DIR="${HOME}/.config/agent-harbour"
+HARBOUR_ENV="${HARBOUR_ENV_DIR}/env"
 if [[ -f "${COLIMA_ENV}" ]]; then
   source "${COLIMA_ENV}"
 fi
 
-if [[ -f "${BOOTSTRAP_ENV}" ]]; then
-  source "${BOOTSTRAP_ENV}"
+if [[ -f "${HARBOUR_ENV}" ]]; then
+  source "${HARBOUR_ENV}"
 fi
 
 refresh_context_files() {
@@ -22,7 +22,7 @@ refresh_context_files() {
 
 load_runtime_env() {
   refresh_context_files
-  if [[ -f "${RUNTIME_ENV}" ]]; then
+  if [[ -z "${HARBOUR_WORKSPACE_ROOT:-}" && -f "${RUNTIME_ENV}" ]]; then
     source "${RUNTIME_ENV}"
   fi
 }
@@ -32,16 +32,18 @@ load_runtime_env
 require_var() {
   local name=$1
   if [[ -z "${(P)name:-}" ]]; then
-    printf "%s is not set. Configure it in %s.\n" "${name}" "${BOOTSTRAP_ENV}" >&2
+    printf "%s is not set. Configure it in %s.\n" "${name}" "${HARBOUR_ENV}" >&2
     exit 1
   fi
 }
 
-persist_bootstrap_env() {
+persist_harbour_env() {
   require_var HARBOUR_CONTEXT_HOST_PATH
-  mkdir -p "${BOOTSTRAP_ENV_DIR}"
-  cat > "${BOOTSTRAP_ENV}" <<EOF
+  mkdir -p "${HARBOUR_ENV_DIR}"
+  cat > "${HARBOUR_ENV}" <<EOF
 HARBOUR_CONTEXT_HOST_PATH=${HARBOUR_CONTEXT_HOST_PATH}
+HARBOUR_WORKSPACE_ROOT=${HARBOUR_WORKSPACE_ROOT:-}
+HARBOUR_ACTIVE_AGENT=${HARBOUR_ACTIVE_AGENT:-}
 EOF
   refresh_context_files
 }

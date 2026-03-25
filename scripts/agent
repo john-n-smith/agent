@@ -5,7 +5,8 @@ set -euo pipefail
 source "${0:A:h}/_common.sh"
 require_var COLIMA_PROFILE
 require_var HARBOUR_CONTEXT_HOST_PATH
-require_var WORKSPACE_ROOT
+require_var HARBOUR_WORKSPACE_ROOT
+require_var HARBOUR_ACTIVE_AGENT
 
 yolo_mode=false
 
@@ -28,17 +29,38 @@ if ! colima_status; then
   exit 1
 fi
 
-printf "Launching Codex in Colima profile %s\n" "${COLIMA_PROFILE}"
-cd "${WORKSPACE_ROOT}"
+case "${HARBOUR_ACTIVE_AGENT}" in
+  codex)
+    agent_name="Codex"
+    agent_command="codex"
+    instruction_file="AGENTS.md"
+    ;;
+  claude)
+    agent_name="Claude Code"
+    agent_command="claude"
+    instruction_file="CLAUDE.md"
+    ;;
+  *)
+    printf "Unsupported HARBOUR_ACTIVE_AGENT=%s. Run make provision and choose codex or claude.\n" "${HARBOUR_ACTIVE_AGENT}" >&2
+    exit 1
+    ;;
+esac
+
+printf "Launching %s in Colima profile %s\n" "${agent_name}" "${COLIMA_PROFILE}"
+cd "${HARBOUR_WORKSPACE_ROOT}"
 exec colima ssh -p "${COLIMA_PROFILE}" -- /usr/bin/bash -lc '
 set -euo pipefail
 
-workspace_root="'"${WORKSPACE_ROOT}"'"
+workspace_root="'"${HARBOUR_WORKSPACE_ROOT}"'"
 harbour_context_dir="'"${HARBOUR_CONTEXT_HOST_PATH}"'"
 yolo_mode="'"${yolo_mode}"'"
+agent_name="'"${agent_name}"'"
+agent_command="'"${agent_command}"'"
+instruction_file="'"${instruction_file}"'"
+export PATH="${HOME}/.local/bin:${PATH}"
 
-if ! command -v codex >/dev/null 2>&1; then
-  echo "codex is not installed in the VM. Run make provision." >&2
+if ! command -v "${agent_command}" >/dev/null 2>&1; then
+  echo "${agent_command} is not installed in the VM. Run make provision." >&2
   exit 127
 fi
 
@@ -48,8 +70,8 @@ if [[ ! -d "${workspace_root}" ]]; then
   exit 127
 fi
 
-if [[ ! -f "${workspace_root}/AGENTS.md" ]]; then
-  echo "${workspace_root}/AGENTS.md is missing in the VM." >&2
+if [[ ! -f "${workspace_root}/${instruction_file}" ]]; then
+  echo "${workspace_root}/${instruction_file} is missing in the VM." >&2
   echo "Run make provision." >&2
   exit 127
 fi
@@ -60,11 +82,24 @@ if [[ ! -d "${harbour_context_dir}" ]]; then
   exit 127
 fi
 
-if [[ "${yolo_mode}" == "true" ]]; then
-  args=(--dangerously-bypass-approvals-and-sandbox -C "${workspace_root}")
-else
-  args=(--sandbox workspace-write -C "${workspace_root}")
-fi
+cd "${workspace_root}"
 
-exec codex "${args[@]}"
+case "${agent_command}" in
+  codex)
+    if [[ "${yolo_mode}" == "true" ]]; then
+      args=(--dangerously-bypass-approvals-and-sandbox -C "${workspace_root}")
+    else
+      args=(--sandbox workspace-write -C "${workspace_root}")
+    fi
+    ;;
+  claude)
+    if [[ "${yolo_mode}" == "true" ]]; then
+      args=(--dangerously-skip-permissions)
+    else
+      args=(--permission-mode acceptEdits)
+    fi
+    ;;
+esac
+
+exec "${agent_command}" "${args[@]}"
 '

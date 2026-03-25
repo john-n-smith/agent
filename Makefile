@@ -7,10 +7,10 @@ PROJECT_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 help:
 	@printf "Available targets:\n"
-	@printf "  make provision                  Start the Colima VM, update Codex in the VM, link AGENTS.md at WORKSPACE_ROOT, and sync skills\n"
-	@printf "  make shell                      Open an interactive shell in the Colima VM\n"
-	@printf "  make agent                      Launch Codex inside the Colima VM\n"
-	@printf "  make yolo                       Launch Codex with approvals and sandbox disabled\n"
+	@printf "  make provision                  Interactively provision the environment\n"
+	@printf "  make shell                      Open a shell in the Colima VM\n"
+	@printf "  make agent                      Launch the agent inside the Colima VM\n"
+	@printf "  make yolo                       Launch the agent with relaxed permissions\n"
 
 provision:
 	@$(PROJECT_ROOT)/scripts/provision

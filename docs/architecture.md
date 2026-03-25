@@ -9,16 +9,16 @@
 
 ## Model
 
-The `harbour` repo acts as the shareable harness. It owns the launch scripts,
+The `Harbour` repo acts as the shareable harness. It owns the launch scripts,
 behaviour rules, and harness design records.
 
 Personal working state should live in a separate private repo such as
-`harbour-context`. That repo should hold `AGENTS.md`, `repos.yaml`, and
-`runtime.env`.
+`harbour-context`. That repo should hold `AGENTS.md`, `repos.yaml`, and any
+other private local files.
 
 Inside the VM, the master agent can see the mounted host repo paths declared in
-`harbour-context/repos.yaml`, plus the runtime paths declared in
-`harbour-context/runtime.env`.
+`harbour-context/repos.yaml`, plus the workspace root declared in the local
+Harbour env.
 
 The master agent keeps global awareness across repos. When a task needs deeper
 project-specific work, it reads that repo's local instructions and narrows focus
@@ -36,13 +36,13 @@ Recommended host-side split:
   Holds `Makefile`, `config/`, `scripts/`, `docs/`, and harness ADRs
 - `harbour-context`
   Private state repo
-  Holds `AGENTS.md`, `repos.yaml`, `runtime.env`, and any other private local files
+  Holds `AGENTS.md`, `repos.yaml`, and any other private local files
 
 Recommended VM exposure:
 
 - Mount work repos from the host
 - Mount the sibling `harbour-context` repo from the host by convention
-- Link `AGENTS.md` at the workspace root to `harbour-context/AGENTS.md` during provision
+- Link the selected root instruction file at the workspace root during provision
 - Do not mount the whole harness repo into the VM by default unless a real need appears
 
 ## VM Runtime
@@ -52,10 +52,9 @@ The startup scripts are deliberately thin wrappers:
 - `harbour-context/repos.yaml` defines allowed host-to-VM mounts
 - Each entry in `harbour-context/repos.yaml` is a `host_path` mounted read-write
 - `config/colima.env` defines the Colima profile and VM defaults
-- `~/.config/agent-harbour/env` defines machine-local bootstrap values such as `HARBOUR_CONTEXT_HOST_PATH`
-- `harbour-context/runtime.env` defines local runtime paths such as `WORKSPACE_ROOT`
-- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, updates Codex in the VM to the configured version, links the workspace instruction file, and syncs Codex skills
-- `scripts/agent` launches Codex in the VM with `workspace-write`
+- `~/.config/agent-harbour/env` defines machine-local Harbour env values such as `HARBOUR_CONTEXT_HOST_PATH`, `HARBOUR_WORKSPACE_ROOT`, and `HARBOUR_ACTIVE_AGENT`
+- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, prompts for the active agent, installs only that agent in the VM, removes the inactive agent, links the matching workspace instruction file, and syncs Codex skills only when Codex is selected
+- `scripts/agent` launches the provisioned agent in the VM
 
 This keeps shared VM defaults in config, private runtime state in
 `harbour-context`, and `make` as the stable entry point.

@@ -1,40 +1,67 @@
-# harbour
+# Harbour
 
-- A colima VM with Codex running in it
-- Your repos are mounted into it, defined in `repos.yaml`
-- An `AGENTS.md` is mounted
-- Skills are mounted
-- `make agent`/ `make yolo` puts you onto the agent
+Harbour runs Claude or Codex in a Colima VM with controlled repo mounts and a versioned shared context
 
-## Getting started
+- Run the agent outside your host machine
+- Work across multiple repos in one session
+- Keep prompts, skills, and policy in a versioned context repo
+- Share a common agent setup across a team
+- Use Docker normally through Colima
+- Switch between Claude and Codex at provision time
 
-1. Set up your context repo
+## Quick start
 
-   Your personal context is stored in a separate repo, `harbour-context`.
+1. Fork `harbour-context-skeleton`
 
-   See [agent-harbour/harbour-context-skeleton/README.md](https://github.com/agent-harbour/harbour-context-skeleton)
+   Clone your fork
 
-2. Provision the VM
+   ```sh
+   git clone --depth 1 git@github.com:agent-harbour/harbour-context-skeleton.git my-harbour-context
+   ```
+
+2. Add your repo mounts to `repos.yaml`
+
+   Add the `host_path` entries you want mounted into the VM
+
+3. Add skills and update `AGENTS.md` in your forked context
+
+   Harbour passes both to the agent
+
+4. Run provision
 
    ```sh
    make provision
    ```
 
-   It will:
+   `make provision` will prompt for `HARBOUR_CONTEXT_HOST_PATH`, `HARBOUR_WORKSPACE_ROOT`, and `codex` or `claude` when needed. `HARBOUR_WORKSPACE_ROOT` accepts `~`
 
-   - Prompt for `HARBOUR_CONTEXT_HOST_PATH` if not set
-   - Start the Colima profile
-   - Mount `harbour-context`
-   - Mount the work repos from `harbour-context/repos.yaml`
-   - Install or update `codex`, `gh`, `make`, and `rg` in the VM
-   - Link `AGENTS.md` at `WORKSPACE_ROOT`
-   - Sync custom skills from `harbour-context/skills`
+   Run `make provision` again after changing `AGENTS.md` or skills
 
-3. Start the agent
+5. Start the agent
 
    ```sh
-   make agent
+   make yolo
    ```
+
+## Provisioning
+
+`make provision` will:
+
+- Start the Colima profile
+- Mount `harbour-context`
+- Mount the work repos from `harbour-context/repos.yaml`
+- Install or update only the selected agent plus shared tooling in the VM
+- Remove the inactive agent from the VM
+- Link `AGENTS.md` or `CLAUDE.md` at `HARBOUR_WORKSPACE_ROOT`
+- Sync custom skills from `harbour-context/skills` when Codex is selected
+
+## Why Harbour
+
+- The agent runs in a VM instead of on your host machine
+- Repo access is explicit through `repos.yaml`
+- The same context repo can carry prompts, policy, and skills
+- Colima keeps Docker integration simple on the host
+- Agent choice stays reversible between Claude and Codex
 
 ## Layout
 
@@ -57,7 +84,8 @@ make yolo
 ## Notes
 
 The intended runtime is a Colima VM. Codex runs directly in the VM, alongside
-repo containers, rather than inside its own container.
+repo containers, rather than inside its own container. Claude Code uses the
+same VM model when selected during `make provision`.
 
 Mount only the repo paths declared in `harbour-context/repos.yaml`. Anything
 mounted into the VM is intentionally shared with the agent and repo containers.

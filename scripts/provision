@@ -13,31 +13,126 @@ require_var COLIMA_MOUNT_TYPE
 require_var COLIMA_FORWARD_SSH_AGENT
 require_var COLIMA_NETWORK_ADDRESS
 require_var COLIMA_PROFILE
-require_var CODEX_VERSION
 
-persisted_bootstrap_env=false
+expand_home_path() {
+  local path=$1
+  printf "%s\n" "${path/#\~/${HOME}}"
+}
+
+persisted_harbour_env=false
+harbour_env_workspace_root="${HARBOUR_WORKSPACE_ROOT:-}"
+
+if [[ -f "${HARBOUR_ENV}" ]]; then
+  printf "Using Harbour env %s\n" "${HARBOUR_ENV}"
+else
+  printf "Harbour env will be created at %s\n" "${HARBOUR_ENV}"
+fi
 
 if [[ -z "${HARBOUR_CONTEXT_HOST_PATH:-}" ]]; then
-  printf "Enter the path to your private harbour-context: "
+  printf "Forked harbour-context path, e.g. ~/git/my-harbour-context: "
   read -r HARBOUR_CONTEXT_HOST_PATH
   if [[ -z "${HARBOUR_CONTEXT_HOST_PATH}" ]]; then
     printf "HARBOUR_CONTEXT_HOST_PATH is required.\n" >&2
     exit 1
   fi
-  persisted_bootstrap_env=true
+  HARBOUR_CONTEXT_HOST_PATH=$(expand_home_path "${HARBOUR_CONTEXT_HOST_PATH}")
+  persisted_harbour_env=true
 fi
 
 require_var HARBOUR_CONTEXT_HOST_PATH
 if [[ ! -d "${HARBOUR_CONTEXT_HOST_PATH}" ]]; then
-  printf "%s does not exist on the host.\n" "${HARBOUR_CONTEXT_HOST_PATH}" >&2
+  printf "%s does not exist.\n" "${HARBOUR_CONTEXT_HOST_PATH}" >&2
   exit 1
 fi
-if [[ "${persisted_bootstrap_env}" == "true" ]]; then
-  persist_bootstrap_env
-  printf "Saved HARBOUR_CONTEXT_HOST_PATH to %s.\n" "${BOOTSTRAP_ENV}"
+if [[ "${persisted_harbour_env}" != "true" ]]; then
+  printf "HARBOUR_CONTEXT_HOST_PATH=%s\n" "${HARBOUR_CONTEXT_HOST_PATH}"
+fi
+refresh_context_files
+if [[ ! -f "${REPOS_FILE}" ]]; then
+  printf "%s is missing. Create it in harbour-context.\n" "${REPOS_FILE}" >&2
+  exit 1
 fi
 load_runtime_env
-require_var WORKSPACE_ROOT
+
+if [[ -z "${HARBOUR_WORKSPACE_ROOT:-}" ]]; then
+  printf "Workspace root, e.g. ~/git: "
+  read -r HARBOUR_WORKSPACE_ROOT
+  if [[ -z "${HARBOUR_WORKSPACE_ROOT}" ]]; then
+    printf "HARBOUR_WORKSPACE_ROOT is required.\n" >&2
+    exit 1
+  fi
+  HARBOUR_WORKSPACE_ROOT=$(expand_home_path "${HARBOUR_WORKSPACE_ROOT}")
+fi
+
+if [[ ! -d "${HARBOUR_WORKSPACE_ROOT}" ]]; then
+  printf "HARBOUR_WORKSPACE_ROOT does not exist: %s\n" "${HARBOUR_WORKSPACE_ROOT}" >&2
+  exit 1
+fi
+if [[ -n "${harbour_env_workspace_root}" ]]; then
+  printf "HARBOUR_WORKSPACE_ROOT=%s\n" "${HARBOUR_WORKSPACE_ROOT}"
+fi
+
+harbour_env_has_workspace_root=false
+if [[ -f "${HARBOUR_ENV}" ]] && grep -q '^HARBOUR_WORKSPACE_ROOT=' "${HARBOUR_ENV}"; then
+  harbour_env_has_workspace_root=true
+fi
+
+if [[ "${persisted_harbour_env}" == "true" || "${harbour_env_workspace_root}" != "${HARBOUR_WORKSPACE_ROOT}" || ! -f "${HARBOUR_ENV}" || "${harbour_env_has_workspace_root}" != "true" ]]; then
+  persist_harbour_env
+  if [[ "${persisted_harbour_env}" == "true" ]]; then
+    printf "Saved HARBOUR_CONTEXT_HOST_PATH to %s.\n" "${HARBOUR_ENV}"
+  fi
+  if [[ "${harbour_env_workspace_root}" != "${HARBOUR_WORKSPACE_ROOT}" || ! -f "${HARBOUR_ENV}" || "${harbour_env_has_workspace_root}" != "true" ]]; then
+    printf "Saved HARBOUR_WORKSPACE_ROOT=%s to %s.\n" "${HARBOUR_WORKSPACE_ROOT}" "${HARBOUR_ENV}"
+  fi
+fi
+
+previous_active_agent="${HARBOUR_ACTIVE_AGENT:-}"
+default_agent="${previous_active_agent:-codex}"
+
+if [[ -n "${previous_active_agent}" ]]; then
+  printf "HARBOUR_ACTIVE_AGENT=%s\n" "${previous_active_agent}"
+fi
+
+while true; do
+  printf "Select the agent to provision [codex/claude] [%s]: " "${default_agent}"
+  read -r reply
+  reply="${reply:l}"
+  if [[ -z "${reply}" ]]; then
+    selected_agent="${default_agent}"
+    break
+  fi
+  case "${reply}" in
+    codex|claude)
+      selected_agent="${reply}"
+      break
+      ;;
+    *)
+      printf "Enter codex or claude.\n" >&2
+      ;;
+  esac
+done
+
+case "${selected_agent}" in
+  codex)
+    require_var CODEX_VERSION
+    requested_version="${CODEX_VERSION}"
+    if [[ "${requested_version}" == "latest" ]]; then
+      printf "Resolving latest Codex release for Colima profile %s\n" "${COLIMA_PROFILE}"
+    else
+      printf "Installing Codex %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
+    fi
+    ;;
+  claude)
+    require_var CLAUDE_CODE_VERSION
+    requested_version="${CLAUDE_CODE_VERSION}"
+    if [[ "${requested_version}" == "latest" ]]; then
+      printf "Resolving latest Claude Code release for Colima profile %s\n" "${COLIMA_PROFILE}"
+    else
+      printf "Installing Claude Code %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
+    fi
+    ;;
+esac
 
 cmd=(colima start "${COLIMA_PROFILE}"
   --runtime "${COLIMA_RUNTIME}"
@@ -58,7 +153,7 @@ fi
 
 cmd+=(--mount "${HARBOUR_CONTEXT_HOST_PATH}:w")
 
-while IFS='|' read -r _name host mode; do
+while IFS= read -r host; do
   [[ -n "${host}" ]] || continue
   cmd+=(--mount "${host}:w")
 done < <(repo_lines)
@@ -101,103 +196,155 @@ else
 fi
 
 harbour_context_agents="${HARBOUR_CONTEXT_HOST_PATH}/AGENTS.md"
-harbour_context_skills_dir="${HARBOUR_CONTEXT_HOST_PATH}/skills"
 if [[ ! -f "${harbour_context_agents}" ]]; then
   printf "%s is missing. Create it in harbour-context before provisioning.\n" "${harbour_context_agents}" >&2
   exit 1
 fi
-
-requested_version="${CODEX_VERSION}"
-if [[ "${requested_version}" == "latest" ]]; then
-  printf "Resolving latest Codex release for Colima profile %s\n" "${COLIMA_PROFILE}"
-else
-  printf "Installing Codex %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
-fi
+harbour_context_skills_dir="${HARBOUR_CONTEXT_HOST_PATH}/skills"
 
 harbour_context_agents_b64=$(base64 < "${harbour_context_agents}" | tr -d '\n')
 host_uid=$(id -u)
 host_gid=$(id -g)
 
-cd "${WORKSPACE_ROOT}"
-colima ssh -p "${COLIMA_PROFILE}" -- /usr/bin/bash -lc "
+cd "${HARBOUR_WORKSPACE_ROOT}"
+colima ssh -p "${COLIMA_PROFILE}" -- /usr/bin/bash -s -- \
+  "${selected_agent}" \
+  "${requested_version}" \
+  "${harbour_context_agents}" \
+  "${harbour_context_skills_dir}" \
+  "${harbour_context_agents_b64}" \
+  "${host_uid}" \
+  "${host_gid}" \
+  "${HARBOUR_WORKSPACE_ROOT}" <<'EOF'
 set -euo pipefail
 
-requested_version='${requested_version}'
-harbour_context_agents_path='${harbour_context_agents}'
-harbour_context_skills_dir='${harbour_context_skills_dir}'
-harbour_context_agents_b64='${harbour_context_agents_b64}'
-host_uid='${host_uid}'
-host_gid='${host_gid}'
-workspace_root='${WORKSPACE_ROOT}'
-agent_bin_dir=\"\${HOME}/.local/bin\"
-codex_path=\"\${agent_bin_dir}/codex\"
-codex_skills_dir=\"\${HOME}/.codex/skills\"
-tmpdir=\$(mktemp -d)
-trap 'rm -rf \"\${tmpdir}\"' EXIT
+selected_agent=$1
+requested_version=$2
+harbour_context_agents_path=$3
+harbour_context_skills_dir=$4
+harbour_context_agents_b64=$5
+host_uid=$6
+host_gid=$7
+workspace_root=$8
 
-arch=\$(uname -m)
-case \"\${arch}\" in
+agent_bin_dir="${HOME}/.local/bin"
+codex_path="${agent_bin_dir}/codex"
+claude_path="${agent_bin_dir}/claude"
+codex_skills_dir="${HOME}/.codex/skills"
+tmpdir=$(mktemp -d)
+trap 'rm -rf "${tmpdir}"' EXIT
+
+arch=$(uname -m)
+case "${arch}" in
   aarch64|arm64)
-    archive_name=\"codex-aarch64-unknown-linux-musl.tar.gz\"
-    binary_name=\"codex-aarch64-unknown-linux-musl\"
+    archive_name="codex-aarch64-unknown-linux-musl.tar.gz"
+    binary_name="codex-aarch64-unknown-linux-musl"
     ;;
   x86_64|amd64)
-    archive_name=\"codex-x86_64-unknown-linux-musl.tar.gz\"
-    binary_name=\"codex-x86_64-unknown-linux-musl\"
+    archive_name="codex-x86_64-unknown-linux-musl.tar.gz"
+    binary_name="codex-x86_64-unknown-linux-musl"
     ;;
   *)
-    echo \"Unsupported VM architecture: \${arch}\" >&2
+    echo "Unsupported VM architecture: ${arch}" >&2
     exit 1
     ;;
 esac
 
-mkdir -p \"\${agent_bin_dir}\"
-current_version=\"\"
-if [[ -x \"\${codex_path}\" ]]; then
-  current_version=\$(\"\${codex_path}\" --version 2>/dev/null | awk '{print \$2}')
-fi
+mkdir -p "${agent_bin_dir}"
 
 if ! command -v make >/dev/null 2>&1 || ! command -v rg >/dev/null 2>&1 || ! command -v gh >/dev/null 2>&1; then
   sudo apt-get update
   sudo apt-get install -y gh make ripgrep
 fi
 
-version=\"\${requested_version}\"
-if [[ \"\${version}\" == \"latest\" ]]; then
-  latest_url=\$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/openai/codex/releases/latest)
-  version=\${latest_url##*/}
-  version=\${version#rust-v}
-  if [[ -z \"\${version}\" || \"\${version}\" == \"latest\" ]]; then
-    echo \"Failed to resolve the latest Codex release version\" >&2
-    exit 1
-  fi
+if [[ ! -f "${harbour_context_agents_path}" ]]; then
+  tmp_agents=$(mktemp)
+  trap 'rm -rf "${tmpdir}" "${tmp_agents}"' EXIT
+  printf '%s' "${harbour_context_agents_b64}" | base64 -d > "${tmp_agents}"
+  sudo install -o "${host_uid}" -g "${host_gid}" -m 0644 "${tmp_agents}" "${harbour_context_agents_path}"
 fi
 
-url=\"https://github.com/openai/codex/releases/download/rust-v\${version}/\${archive_name}\"
+case "${selected_agent}" in
+  codex)
+    current_version=""
+    if [[ -x "${codex_path}" ]]; then
+      current_version=$("${codex_path}" --version 2>/dev/null | awk '{print $2}')
+    fi
 
-echo \"Target Codex version: \${version}\"
-if [[ \"\${current_version}\" != \"\${version}\" ]]; then
-  curl -fsSL \"\${url}\" -o \"\${tmpdir}/codex.tar.gz\"
-  tar -xzf \"\${tmpdir}/codex.tar.gz\" -C \"\${tmpdir}\"
-  install -m 0755 \"\${tmpdir}/\${binary_name}\" \"\${codex_path}\"
+    version="${requested_version}"
+    if [[ "${version}" == "latest" ]]; then
+      latest_url=$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/openai/codex/releases/latest)
+      version=${latest_url##*/}
+      version=${version#rust-v}
+      if [[ -z "${version}" || "${version}" == "latest" ]]; then
+        echo "Failed to resolve the latest Codex release version" >&2
+        exit 1
+      fi
+    fi
+
+    url="https://github.com/openai/codex/releases/download/rust-v${version}/${archive_name}"
+
+    echo "Target Codex version: ${version}"
+    if [[ "${current_version}" != "${version}" ]]; then
+      curl -fsSL "${url}" -o "${tmpdir}/codex.tar.gz"
+      tar -xzf "${tmpdir}/codex.tar.gz" -C "${tmpdir}"
+      install -m 0755 "${tmpdir}/${binary_name}" "${codex_path}"
+    fi
+
+    rm -f "${claude_path}"
+
+    mkdir -p "${codex_skills_dir}"
+    if [[ -d "${harbour_context_skills_dir}" ]]; then
+      while IFS= read -r skill_dir; do
+        skill_name=$(basename "${skill_dir}")
+        ln -sfn "${skill_dir}" "${codex_skills_dir}/${skill_name}"
+      done < <(find "${harbour_context_skills_dir}" -mindepth 1 -maxdepth 1 -type d | sort)
+    fi
+
+    sudo ln -sfn "${harbour_context_agents_path}" "${workspace_root}/AGENTS.md"
+    sudo rm -f "${workspace_root}/CLAUDE.md"
+    ;;
+  claude)
+    current_version=""
+    if [[ -x "${claude_path}" ]]; then
+      current_version=$("${claude_path}" --version 2>/dev/null | awk '{print $NF}' | sed 's/^v//')
+    fi
+
+    version="${requested_version}"
+    echo "Target Claude Code version: ${version}"
+    if [[ "${version}" == "latest" ]]; then
+      curl -fsSL https://claude.ai/install.sh | bash
+      version=$("${claude_path}" --version 2>/dev/null | awk '{print $NF}' | sed 's/^v//')
+      if [[ -z "${version}" ]]; then
+        echo "Failed to detect the installed Claude Code version" >&2
+        exit 1
+      fi
+    elif [[ "${current_version}" != "${version}" ]]; then
+      curl -fsSL https://claude.ai/install.sh | bash -s "${version}"
+    fi
+
+    rm -f "${codex_path}"
+    rm -rf "${codex_skills_dir}"
+
+    sudo ln -sfn "${harbour_context_agents_path}" "${workspace_root}/CLAUDE.md"
+    sudo rm -f "${workspace_root}/AGENTS.md"
+    ;;
+esac
+EOF
+
+if [[ "${selected_agent}" != "${previous_active_agent}" ]]; then
+  HARBOUR_ACTIVE_AGENT="${selected_agent}"
+  persist_harbour_env
+  printf "Saved HARBOUR_ACTIVE_AGENT=%s to %s.\n" "${HARBOUR_ACTIVE_AGENT}" "${HARBOUR_ENV}"
 fi
 
-if [[ ! -f \"\${harbour_context_agents_path}\" ]]; then
-  tmp_agents=\$(mktemp)
-  trap 'rm -rf \"\${tmpdir}\" \"\${tmp_agents}\"' EXIT
-  printf '%s' \"\${harbour_context_agents_b64}\" | base64 -d > \"\${tmp_agents}\"
-  sudo install -o \"\${host_uid}\" -g \"\${host_gid}\" -m 0644 \"\${tmp_agents}\" \"\${harbour_context_agents_path}\"
-fi
+case "${selected_agent}" in
+  codex)
+    printf "Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n" "${requested_version}" "${HARBOUR_WORKSPACE_ROOT}"
+    ;;
+  claude)
+    printf "Provisioned Claude Code %s, linked %s/CLAUDE.md, and removed Codex.\n" "${version:-$requested_version}" "${HARBOUR_WORKSPACE_ROOT}"
+    ;;
+esac
 
-mkdir -p \"\${codex_skills_dir}\"
-if [[ -d \"\${harbour_context_skills_dir}\" ]]; then
-  while IFS= read -r skill_dir; do
-    skill_name=\$(basename \"\${skill_dir}\")
-    ln -sfn \"\${skill_dir}\" \"\${codex_skills_dir}/\${skill_name}\"
-  done < <(find \"\${harbour_context_skills_dir}\" -mindepth 1 -maxdepth 1 -type d | sort)
-fi
-
-sudo ln -sfn \"\${harbour_context_agents_path}\" \"\${workspace_root}/AGENTS.md\"
-"
-
-printf "Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n" "${requested_version}" "${WORKSPACE_ROOT}"
+printf "Run make yolo or make agent to start.\n"
