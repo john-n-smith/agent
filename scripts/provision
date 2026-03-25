@@ -13,7 +13,6 @@ require_var COLIMA_MOUNT_TYPE
 require_var COLIMA_FORWARD_SSH_AGENT
 require_var COLIMA_NETWORK_ADDRESS
 require_var COLIMA_PROFILE
-require_var CODEX_VERSION
 
 expand_home_path() {
   local path=$1
@@ -63,6 +62,49 @@ if [[ ! -d "${WORKSPACE_ROOT}" ]]; then
   printf "WORKSPACE_ROOT does not exist: %s\n" "${WORKSPACE_ROOT}" >&2
   exit 1
 fi
+
+previous_active_agent="${ACTIVE_AGENT:-}"
+default_agent="${previous_active_agent:-codex}"
+
+while true; do
+  printf "Select the agent to provision [codex/claude] [%s]: " "${default_agent}"
+  read -r reply
+  reply="${reply:l}"
+  if [[ -z "${reply}" ]]; then
+    selected_agent="${default_agent}"
+    break
+  fi
+  case "${reply}" in
+    codex|claude)
+      selected_agent="${reply}"
+      break
+      ;;
+    *)
+      printf "Enter codex or claude.\n" >&2
+      ;;
+  esac
+done
+
+case "${selected_agent}" in
+  codex)
+    require_var CODEX_VERSION
+    requested_version="${CODEX_VERSION}"
+    if [[ "${requested_version}" == "latest" ]]; then
+      printf "Resolving latest Codex release for Colima profile %s\n" "${COLIMA_PROFILE}"
+    else
+      printf "Installing Codex %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
+    fi
+    ;;
+  claude)
+    require_var CLAUDE_CODE_VERSION
+    requested_version="${CLAUDE_CODE_VERSION}"
+    if [[ "${requested_version}" == "latest" ]]; then
+      printf "Resolving latest Claude Code release for Colima profile %s\n" "${COLIMA_PROFILE}"
+    else
+      printf "Installing Claude Code %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
+    fi
+    ;;
+esac
 
 cmd=(colima start "${COLIMA_PROFILE}"
   --runtime "${COLIMA_RUNTIME}"
@@ -132,19 +174,13 @@ if [[ ! -f "${harbour_context_agents}" ]]; then
   exit 1
 fi
 
-requested_version="${CODEX_VERSION}"
-if [[ "${requested_version}" == "latest" ]]; then
-  printf "Resolving latest Codex release for Colima profile %s\n" "${COLIMA_PROFILE}"
-else
-  printf "Installing Codex %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
-fi
-
 harbour_context_agents_b64=$(base64 < "${harbour_context_agents}" | tr -d '\n')
 host_uid=$(id -u)
 host_gid=$(id -g)
 
 cd "${WORKSPACE_ROOT}"
 colima ssh -p "${COLIMA_PROFILE}" -- /usr/bin/bash -s -- \
+  "${selected_agent}" \
   "${requested_version}" \
   "${harbour_context_agents}" \
   "${harbour_context_skills_dir}" \
@@ -154,16 +190,18 @@ colima ssh -p "${COLIMA_PROFILE}" -- /usr/bin/bash -s -- \
   "${WORKSPACE_ROOT}" <<'EOF'
 set -euo pipefail
 
-requested_version=$1
-harbour_context_agents_path=$2
-harbour_context_skills_dir=$3
-harbour_context_agents_b64=$4
-host_uid=$5
-host_gid=$6
-workspace_root=$7
+selected_agent=$1
+requested_version=$2
+harbour_context_agents_path=$3
+harbour_context_skills_dir=$4
+harbour_context_agents_b64=$5
+host_uid=$6
+host_gid=$7
+workspace_root=$8
 
 agent_bin_dir="${HOME}/.local/bin"
 codex_path="${agent_bin_dir}/codex"
+claude_path="${agent_bin_dir}/claude"
 codex_skills_dir="${HOME}/.codex/skills"
 tmpdir=$(mktemp -d)
 trap 'rm -rf "${tmpdir}"' EXIT
@@ -185,34 +223,10 @@ case "${arch}" in
 esac
 
 mkdir -p "${agent_bin_dir}"
-current_version=""
-if [[ -x "${codex_path}" ]]; then
-  current_version=$("${codex_path}" --version 2>/dev/null | awk '{print $2}')
-fi
 
 if ! command -v make >/dev/null 2>&1 || ! command -v rg >/dev/null 2>&1 || ! command -v gh >/dev/null 2>&1; then
   sudo apt-get update
   sudo apt-get install -y gh make ripgrep
-fi
-
-version="${requested_version}"
-if [[ "${version}" == "latest" ]]; then
-  latest_url=$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/openai/codex/releases/latest)
-  version=${latest_url##*/}
-  version=${version#rust-v}
-  if [[ -z "${version}" || "${version}" == "latest" ]]; then
-    echo "Failed to resolve the latest Codex release version" >&2
-    exit 1
-  fi
-fi
-
-url="https://github.com/openai/codex/releases/download/rust-v${version}/${archive_name}"
-
-echo "Target Codex version: ${version}"
-if [[ "${current_version}" != "${version}" ]]; then
-  curl -fsSL "${url}" -o "${tmpdir}/codex.tar.gz"
-  tar -xzf "${tmpdir}/codex.tar.gz" -C "${tmpdir}"
-  install -m 0755 "${tmpdir}/${binary_name}" "${codex_path}"
 fi
 
 if [[ ! -f "${harbour_context_agents_path}" ]]; then
@@ -222,16 +236,87 @@ if [[ ! -f "${harbour_context_agents_path}" ]]; then
   sudo install -o "${host_uid}" -g "${host_gid}" -m 0644 "${tmp_agents}" "${harbour_context_agents_path}"
 fi
 
-mkdir -p "${codex_skills_dir}"
-if [[ -d "${harbour_context_skills_dir}" ]]; then
-  while IFS= read -r skill_dir; do
-    skill_name=$(basename "${skill_dir}")
-    ln -sfn "${skill_dir}" "${codex_skills_dir}/${skill_name}"
-  done < <(find "${harbour_context_skills_dir}" -mindepth 1 -maxdepth 1 -type d | sort)
-fi
+case "${selected_agent}" in
+  codex)
+    current_version=""
+    if [[ -x "${codex_path}" ]]; then
+      current_version=$("${codex_path}" --version 2>/dev/null | awk '{print $2}')
+    fi
 
-sudo ln -sfn "${harbour_context_agents_path}" "${workspace_root}/AGENTS.md"
+    version="${requested_version}"
+    if [[ "${version}" == "latest" ]]; then
+      latest_url=$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/openai/codex/releases/latest)
+      version=${latest_url##*/}
+      version=${version#rust-v}
+      if [[ -z "${version}" || "${version}" == "latest" ]]; then
+        echo "Failed to resolve the latest Codex release version" >&2
+        exit 1
+      fi
+    fi
+
+    url="https://github.com/openai/codex/releases/download/rust-v${version}/${archive_name}"
+
+    echo "Target Codex version: ${version}"
+    if [[ "${current_version}" != "${version}" ]]; then
+      curl -fsSL "${url}" -o "${tmpdir}/codex.tar.gz"
+      tar -xzf "${tmpdir}/codex.tar.gz" -C "${tmpdir}"
+      install -m 0755 "${tmpdir}/${binary_name}" "${codex_path}"
+    fi
+
+    rm -f "${claude_path}"
+
+    mkdir -p "${codex_skills_dir}"
+    if [[ -d "${harbour_context_skills_dir}" ]]; then
+      while IFS= read -r skill_dir; do
+        skill_name=$(basename "${skill_dir}")
+        ln -sfn "${skill_dir}" "${codex_skills_dir}/${skill_name}"
+      done < <(find "${harbour_context_skills_dir}" -mindepth 1 -maxdepth 1 -type d | sort)
+    fi
+
+    sudo ln -sfn "${harbour_context_agents_path}" "${workspace_root}/AGENTS.md"
+    sudo rm -f "${workspace_root}/CLAUDE.md"
+    ;;
+  claude)
+    current_version=""
+    if [[ -x "${claude_path}" ]]; then
+      current_version=$("${claude_path}" --version 2>/dev/null | awk '{print $NF}' | sed 's/^v//')
+    fi
+
+    version="${requested_version}"
+    echo "Target Claude Code version: ${version}"
+    if [[ "${version}" == "latest" ]]; then
+      curl -fsSL https://claude.ai/install.sh | bash
+      version=$("${claude_path}" --version 2>/dev/null | awk '{print $NF}' | sed 's/^v//')
+      if [[ -z "${version}" ]]; then
+        echo "Failed to detect the installed Claude Code version" >&2
+        exit 1
+      fi
+    elif [[ "${current_version}" != "${version}" ]]; then
+      curl -fsSL https://claude.ai/install.sh | bash -s "${version}"
+    fi
+
+    rm -f "${codex_path}"
+    rm -rf "${codex_skills_dir}"
+
+    sudo ln -sfn "${harbour_context_agents_path}" "${workspace_root}/CLAUDE.md"
+    sudo rm -f "${workspace_root}/AGENTS.md"
+    ;;
+esac
 EOF
 
-printf "Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n" "${requested_version}" "${WORKSPACE_ROOT}"
+if [[ "${selected_agent}" != "${previous_active_agent}" ]]; then
+  ACTIVE_AGENT="${selected_agent}"
+  persist_bootstrap_env
+  printf "Saved ACTIVE_AGENT=%s to %s.\n" "${ACTIVE_AGENT}" "${BOOTSTRAP_ENV}"
+fi
+
+case "${selected_agent}" in
+  codex)
+    printf "Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n" "${requested_version}" "${WORKSPACE_ROOT}"
+    ;;
+  claude)
+    printf "Provisioned Claude Code %s, linked %s/CLAUDE.md, and removed Codex.\n" "${version:-$requested_version}" "${WORKSPACE_ROOT}"
+    ;;
+esac
+
 printf "Run make yolo or make agent to start.\n"

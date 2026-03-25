@@ -42,6 +42,7 @@ persist_bootstrap_env() {
   mkdir -p "${BOOTSTRAP_ENV_DIR}"
   cat > "${BOOTSTRAP_ENV}" <<EOF
 HARBOUR_CONTEXT_HOST_PATH=${HARBOUR_CONTEXT_HOST_PATH}
+ACTIVE_AGENT=${ACTIVE_AGENT:-}
 EOF
   refresh_context_files
 }
