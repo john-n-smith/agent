@@ -2,9 +2,9 @@
 
 Harbour runs Claude or Codex in a Colima VM with controlled repo mounts and a versioned shared context
 
-- Run the agent outside your host machine
-- Work across multiple repos in one session
-- Keep prompts, skills, and policy in a versioned context repo
+- Run the agent isolated from your host machine
+- Work across multiple repos
+- Keep skills, and policy in a versioned context repo
 - Share a common agent setup across a team
 - Use Docker normally through Colima
 - Switch between Claude and Codex at provision time
@@ -16,12 +16,13 @@ Harbour runs Claude or Codex in a Colima VM with controlled repo mounts and a ve
    Clone your fork
 
    ```sh
-   git clone --depth 1 git@github.com:agent-harbour/harbour-context-skeleton.git my-harbour-context
+   git clone --depth 1 git@github.com:my-user/my-harbour-context-fork.git
    ```
 
 2. Add your repo mounts to `repos.yaml`
 
-   Add the `host_path` entries you want mounted into the VM
+   Add the repo entries you want mounted into the VM
+   Relative paths are resolved from `HARBOUR_WORKSPACE_ROOT`
 
 3. Add skills and update `AGENTS.md` in your forked context
 
@@ -50,18 +51,11 @@ Harbour runs Claude or Codex in a Colima VM with controlled repo mounts and a ve
 - Start the Colima profile
 - Mount `harbour-context`
 - Mount the work repos from `harbour-context/repos.yaml`
+- Warn and skip any repo mount whose host directory does not exist
 - Install or update only the selected agent plus shared tooling in the VM
 - Remove the inactive agent from the VM
 - Link `AGENTS.md` or `CLAUDE.md` at `HARBOUR_WORKSPACE_ROOT`
-- Sync custom skills from `harbour-context/skills` when Codex is selected
-
-## Why Harbour
-
-- The agent runs in a VM instead of on your host machine
-- Repo access is explicit through `repos.yaml`
-- The same context repo can carry prompts, policy, and skills
-- Colima keeps Docker integration simple on the host
-- Agent choice stays reversible between Claude and Codex
+- Sync custom skills from `harbour-context/skills` to the selected agent's skills directory
 
 ## Layout
 
@@ -80,14 +74,3 @@ make shell
 make agent
 make yolo
 ```
-
-## Notes
-
-The intended runtime is a Colima VM. Codex runs directly in the VM, alongside
-repo containers, rather than inside its own container. Claude Code uses the
-same VM model when selected during `make provision`.
-
-Mount only the repo paths declared in `harbour-context/repos.yaml`. Anything
-mounted into the VM is intentionally shared with the agent and repo containers.
-
-Each entry in `repos.yaml` is a `host_path` and is mounted read-write.

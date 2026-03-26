@@ -50,10 +50,13 @@ Recommended VM exposure:
 The startup scripts are deliberately thin wrappers:
 
 - `harbour-context/repos.yaml` defines allowed host-to-VM mounts
-- Each entry in `harbour-context/repos.yaml` is a `host_path` mounted read-write
+- Each entry in `harbour-context/repos.yaml` is mounted read-write
+- Absolute repo paths are mounted as written
+- Relative repo paths are resolved from `HARBOUR_WORKSPACE_ROOT`
+- Missing repo mount directories are warned and skipped during provision
 - `config/colima.env` defines the Colima profile and VM defaults
 - `~/.config/agent-harbour/env` defines machine-local Harbour env values such as `HARBOUR_CONTEXT_HOST_PATH`, `HARBOUR_WORKSPACE_ROOT`, and `HARBOUR_ACTIVE_AGENT`
-- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, prompts for the active agent, installs only that agent in the VM, removes the inactive agent, links the matching workspace instruction file, and syncs Codex skills only when Codex is selected
+- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, prompts for the active agent, installs only that agent in the VM, removes the inactive agent, links the matching workspace instruction file, and syncs skills to the selected agent's skills directory
 - `scripts/agent` launches the provisioned agent in the VM
 
 This keeps shared VM defaults in config, private runtime state in

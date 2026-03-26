@@ -14,11 +14,6 @@ require_var COLIMA_FORWARD_SSH_AGENT
 require_var COLIMA_NETWORK_ADDRESS
 require_var COLIMA_PROFILE
 
-expand_home_path() {
-  local path=$1
-  printf "%s\n" "${path/#\~/${HOME}}"
-}
-
 persisted_harbour_env=false
 harbour_env_workspace_root="${HARBOUR_WORKSPACE_ROOT:-}"
 
@@ -29,7 +24,7 @@ else
 fi
 
 if [[ -z "${HARBOUR_CONTEXT_HOST_PATH:-}" ]]; then
-  printf "Forked harbour-context path, e.g. ~/git/my-harbour-context: "
+  printf "Your Harbour context path, e.g. ~/git/my-harbour-context: "
   read -r HARBOUR_CONTEXT_HOST_PATH
   if [[ -z "${HARBOUR_CONTEXT_HOST_PATH}" ]]; then
     printf "HARBOUR_CONTEXT_HOST_PATH is required.\n" >&2
@@ -156,7 +151,7 @@ cmd+=(--mount "${HARBOUR_CONTEXT_HOST_PATH}:w")
 while IFS= read -r host; do
   [[ -n "${host}" ]] || continue
   cmd+=(--mount "${host}:w")
-done < <(repo_lines)
+done < <(repo_lines true)
 
 desired_mounts=$(desired_mount_lines | sort)
 current_mounts=$(current_mount_lines | sort)
@@ -231,6 +226,7 @@ agent_bin_dir="${HOME}/.local/bin"
 codex_path="${agent_bin_dir}/codex"
 claude_path="${agent_bin_dir}/claude"
 codex_skills_dir="${HOME}/.codex/skills"
+claude_skills_dir="${HOME}/.claude/skills"
 tmpdir=$(mktemp -d)
 trap 'rm -rf "${tmpdir}"' EXIT
 
@@ -251,6 +247,17 @@ case "${arch}" in
 esac
 
 mkdir -p "${agent_bin_dir}"
+
+sync_skills() {
+  local target_skills_dir=$1
+  mkdir -p "${target_skills_dir}"
+  if [[ -d "${harbour_context_skills_dir}" ]]; then
+    while IFS= read -r skill_dir; do
+      skill_name=$(basename "${skill_dir}")
+      ln -sfn "${skill_dir}" "${target_skills_dir}/${skill_name}"
+    done < <(find "${harbour_context_skills_dir}" -mindepth 1 -maxdepth 1 -type d | sort)
+  fi
+}
 
 if ! command -v make >/dev/null 2>&1 || ! command -v rg >/dev/null 2>&1 || ! command -v gh >/dev/null 2>&1; then
   sudo apt-get update
@@ -292,14 +299,7 @@ case "${selected_agent}" in
     fi
 
     rm -f "${claude_path}"
-
-    mkdir -p "${codex_skills_dir}"
-    if [[ -d "${harbour_context_skills_dir}" ]]; then
-      while IFS= read -r skill_dir; do
-        skill_name=$(basename "${skill_dir}")
-        ln -sfn "${skill_dir}" "${codex_skills_dir}/${skill_name}"
-      done < <(find "${harbour_context_skills_dir}" -mindepth 1 -maxdepth 1 -type d | sort)
-    fi
+    sync_skills "${codex_skills_dir}"
 
     sudo ln -sfn "${harbour_context_agents_path}" "${workspace_root}/AGENTS.md"
     sudo rm -f "${workspace_root}/CLAUDE.md"
@@ -324,7 +324,7 @@ case "${selected_agent}" in
     fi
 
     rm -f "${codex_path}"
-    rm -rf "${codex_skills_dir}"
+    sync_skills "${claude_skills_dir}"
 
     sudo ln -sfn "${harbour_context_agents_path}" "${workspace_root}/CLAUDE.md"
     sudo rm -f "${workspace_root}/AGENTS.md"
@@ -343,7 +343,7 @@ case "${selected_agent}" in
     printf "Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n" "${requested_version}" "${HARBOUR_WORKSPACE_ROOT}"
     ;;
   claude)
-    printf "Provisioned Claude Code %s, linked %s/CLAUDE.md, and removed Codex.\n" "${version:-$requested_version}" "${HARBOUR_WORKSPACE_ROOT}"
+    printf "Provisioned Claude Code %s, linked %s/CLAUDE.md, and synced custom skills.\n" "${version:-$requested_version}" "${HARBOUR_WORKSPACE_ROOT}"
     ;;
 esac
 

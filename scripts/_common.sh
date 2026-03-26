@@ -29,6 +29,11 @@ load_runtime_env() {
 
 load_runtime_env
 
+expand_home_path() {
+  local path=$1
+  printf "%s\n" "${path/#\~/${HOME}}"
+}
+
 require_var() {
   local name=$1
   if [[ -z "${(P)name:-}" ]]; then
@@ -48,16 +53,52 @@ EOF
   refresh_context_files
 }
 
-repo_lines() {
+resolved_repo_lines() {
   require_var HARBOUR_CONTEXT_HOST_PATH
   if [[ ! -f "${REPOS_FILE}" ]]; then
     printf "%s is missing. Create it in harbour-context.\n" "${REPOS_FILE}" >&2
     exit 1
   fi
-  awk '
-    $1 == "-" && $2 == "host_path:" {print $3}
-    $1 == "host_path:" {print $2}
-  ' "${REPOS_FILE}"
+  while IFS= read -r raw_host; do
+    [[ -n "${raw_host}" ]] || continue
+    raw_host=$(expand_home_path "${raw_host}")
+    if [[ "${raw_host}" = /* ]]; then
+      printf "%s\n" "${raw_host}"
+      continue
+    fi
+
+    require_var HARBOUR_WORKSPACE_ROOT
+    printf "%s/%s\n" "${HARBOUR_WORKSPACE_ROOT:A}" "${raw_host}"
+  done < <(
+    awk '
+      /^[[:space:]]*-[[:space:]]*host_path:[[:space:]]*/ {
+        sub(/^[[:space:]]*-[[:space:]]*host_path:[[:space:]]*/, "", $0)
+        sub(/[[:space:]]+#.*$/, "", $0)
+        print $0
+        next
+      }
+      /^[[:space:]]*host_path:[[:space:]]*/ {
+        sub(/^[[:space:]]*host_path:[[:space:]]*/, "", $0)
+        sub(/[[:space:]]+#.*$/, "", $0)
+        print $0
+      }
+    ' "${REPOS_FILE}"
+  )
+}
+
+repo_lines() {
+  local warn_missing=${1:-false}
+  while IFS= read -r host; do
+    [[ -n "${host}" ]] || continue
+    if [[ -d "${host}" ]]; then
+      printf "%s\n" "${host}"
+      continue
+    fi
+
+    if bool_flag "${warn_missing}"; then
+      printf "Warning: skipping missing repo mount %s\n" "${host}" >&2
+    fi
+  done < <(resolved_repo_lines)
 }
 
 desired_mount_lines() {
