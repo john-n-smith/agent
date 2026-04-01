@@ -26,7 +26,7 @@ Run agents across all your repos in an isolated, shareable sandbox.
    make provision
    ```
 
-   `make provision` will prompt for
+   `make provision` will create `~/.config/harbour/env` from `config/harbour.env.example` if it does not exist, then prompt for
 
    - `HARBOUR_HARNESS_PATH` - the path to your harness
    - `HARBOUR_WORKSPACE_ROOT` = where you keep your repos. Accepts `~`
@@ -49,7 +49,8 @@ Run agents across all your repos in an isolated, shareable sandbox.
 
 `make provision` will:
 
-- Start the Colima profile
+- Create `~/.config/harbour/env` from `config/harbour.env.example` if needed
+- Start the configured Harbour profile in Colima
 - Mount `harbour-harness`
 - Mount the work repos from `harbour-harness/repos.yaml`
 - Warn and skip any repo mount whose host directory does not exist
@@ -61,7 +62,7 @@ Run agents across all your repos in an isolated, shareable sandbox.
 ## Layout
 
 - `Makefile`: Stable entry points
-- `config/colima.env`: Colima defaults
+- `config/harbour.env.example`: Example local Harbour config
 - `scripts/`: Provisioning and launch scripts
 - `docs/architecture.md`: Runtime model
 - `docs/adr/`: Design decisions

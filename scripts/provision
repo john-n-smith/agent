@@ -3,25 +3,23 @@
 set -euo pipefail
 
 source "${0:A:h}/_common.sh"
-require_var COLIMA_RUNTIME
-require_var COLIMA_VM_TYPE
-require_var COLIMA_ARCH
-require_var COLIMA_CPU
-require_var COLIMA_MEMORY
-require_var COLIMA_DISK
-require_var COLIMA_MOUNT_TYPE
-require_var COLIMA_FORWARD_SSH_AGENT
-require_var COLIMA_NETWORK_ADDRESS
-require_var COLIMA_PROFILE
+bootstrap_harbour_env
+load_harbour_env
+refresh_context_files
+require_var HARBOUR_COLIM_PROFILE
+require_var HARBOUR_COLIM_RUNTIME
+require_var HARBOUR_COLIM_VM_TYPE
+require_var HARBOUR_COLIM_ARCH
+require_var HARBOUR_COLIM_CPU
+require_var HARBOUR_COLIM_MEMORY
+require_var HARBOUR_COLIM_DISK
+require_var HARBOUR_COLIM_MOUNT_TYPE
+require_var HARBOUR_COLIM_FORWARD_SSH_AGENT
+require_var HARBOUR_COLIM_NETWORK_ADDRESS
+require_var HARBOUR_CODEX_VERSION
+require_var HARBOUR_CLAUDE_CODE_VERSION
 
-persisted_harbour_env=false
-harbour_env_workspace_root="${HARBOUR_WORKSPACE_ROOT:-}"
-
-if [[ -f "${HARBOUR_ENV}" ]]; then
-  printf "Using Harbour env %s\n" "${HARBOUR_ENV}"
-else
-  printf "Harbour env will be created at %s\n" "${HARBOUR_ENV}"
-fi
+printf "Using Harbour env %s\n" "${HARBOUR_ENV}"
 
 if [[ -z "${HARBOUR_HARNESS_PATH:-}" ]]; then
   printf "Your Harbour harness path, e.g. ~/git/my-harbour-harness: "
@@ -31,7 +29,6 @@ if [[ -z "${HARBOUR_HARNESS_PATH:-}" ]]; then
     exit 1
   fi
   HARBOUR_HARNESS_PATH=$(expand_home_path "${HARBOUR_HARNESS_PATH}")
-  persisted_harbour_env=true
 fi
 
 require_var HARBOUR_HARNESS_PATH
@@ -39,15 +36,12 @@ if [[ ! -d "${HARBOUR_HARNESS_PATH}" ]]; then
   printf "%s does not exist.\n" "${HARBOUR_HARNESS_PATH}" >&2
   exit 1
 fi
-if [[ "${persisted_harbour_env}" != "true" ]]; then
-  printf "HARBOUR_HARNESS_PATH=%s\n" "${HARBOUR_HARNESS_PATH}"
-fi
+printf "HARBOUR_HARNESS_PATH=%s\n" "${HARBOUR_HARNESS_PATH}"
 refresh_context_files
 if [[ ! -f "${REPOS_FILE}" ]]; then
   printf "%s is missing. Create it in harbour-harness.\n" "${REPOS_FILE}" >&2
   exit 1
 fi
-load_runtime_env
 
 if [[ -z "${HARBOUR_WORKSPACE_ROOT:-}" ]]; then
   printf "Workspace root, e.g. ~/git: "
@@ -63,24 +57,7 @@ if [[ ! -d "${HARBOUR_WORKSPACE_ROOT}" ]]; then
   printf "HARBOUR_WORKSPACE_ROOT does not exist: %s\n" "${HARBOUR_WORKSPACE_ROOT}" >&2
   exit 1
 fi
-if [[ -n "${harbour_env_workspace_root}" ]]; then
-  printf "HARBOUR_WORKSPACE_ROOT=%s\n" "${HARBOUR_WORKSPACE_ROOT}"
-fi
-
-harbour_env_has_workspace_root=false
-if [[ -f "${HARBOUR_ENV}" ]] && grep -q '^HARBOUR_WORKSPACE_ROOT=' "${HARBOUR_ENV}"; then
-  harbour_env_has_workspace_root=true
-fi
-
-if [[ "${persisted_harbour_env}" == "true" || "${harbour_env_workspace_root}" != "${HARBOUR_WORKSPACE_ROOT}" || ! -f "${HARBOUR_ENV}" || "${harbour_env_has_workspace_root}" != "true" ]]; then
-  persist_harbour_env
-  if [[ "${persisted_harbour_env}" == "true" ]]; then
-    printf "Saved HARBOUR_HARNESS_PATH to %s.\n" "${HARBOUR_ENV}"
-  fi
-  if [[ "${harbour_env_workspace_root}" != "${HARBOUR_WORKSPACE_ROOT}" || ! -f "${HARBOUR_ENV}" || "${harbour_env_has_workspace_root}" != "true" ]]; then
-    printf "Saved HARBOUR_WORKSPACE_ROOT=%s to %s.\n" "${HARBOUR_WORKSPACE_ROOT}" "${HARBOUR_ENV}"
-  fi
-fi
+printf "HARBOUR_WORKSPACE_ROOT=%s\n" "${HARBOUR_WORKSPACE_ROOT}"
 
 previous_active_agent="${HARBOUR_ACTIVE_AGENT:-}"
 default_agent="${previous_active_agent:-codex}"
@@ -110,39 +87,37 @@ done
 
 case "${selected_agent}" in
   codex)
-    require_var CODEX_VERSION
-    requested_version="${CODEX_VERSION}"
+    requested_version="${HARBOUR_CODEX_VERSION}"
     if [[ "${requested_version}" == "latest" ]]; then
-      printf "Resolving latest Codex release for Colima profile %s\n" "${COLIMA_PROFILE}"
+      printf "Resolving latest Codex release for Harbour profile %s\n" "${HARBOUR_COLIM_PROFILE}"
     else
-      printf "Installing Codex %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
+      printf "Installing Codex %s in Harbour profile %s\n" "${requested_version}" "${HARBOUR_COLIM_PROFILE}"
     fi
     ;;
   claude)
-    require_var CLAUDE_CODE_VERSION
-    requested_version="${CLAUDE_CODE_VERSION}"
+    requested_version="${HARBOUR_CLAUDE_CODE_VERSION}"
     if [[ "${requested_version}" == "latest" ]]; then
-      printf "Resolving latest Claude Code release for Colima profile %s\n" "${COLIMA_PROFILE}"
+      printf "Resolving latest Claude Code release for Harbour profile %s\n" "${HARBOUR_COLIM_PROFILE}"
     else
-      printf "Installing Claude Code %s in Colima profile %s\n" "${requested_version}" "${COLIMA_PROFILE}"
+      printf "Installing Claude Code %s in Harbour profile %s\n" "${requested_version}" "${HARBOUR_COLIM_PROFILE}"
     fi
     ;;
 esac
 
-cmd=(colima start "${COLIMA_PROFILE}"
-  --runtime "${COLIMA_RUNTIME}"
-  --vm-type "${COLIMA_VM_TYPE}"
-  --arch "${COLIMA_ARCH}"
-  --cpu "${COLIMA_CPU}"
-  --memory "${COLIMA_MEMORY}"
-  --disk "${COLIMA_DISK}"
-  --mount-type "${COLIMA_MOUNT_TYPE}")
+cmd=(colima start "${HARBOUR_COLIM_PROFILE}"
+  --runtime "${HARBOUR_COLIM_RUNTIME}"
+  --vm-type "${HARBOUR_COLIM_VM_TYPE}"
+  --arch "${HARBOUR_COLIM_ARCH}"
+  --cpu "${HARBOUR_COLIM_CPU}"
+  --memory "${HARBOUR_COLIM_MEMORY}"
+  --disk "${HARBOUR_COLIM_DISK}"
+  --mount-type "${HARBOUR_COLIM_MOUNT_TYPE}")
 
-if bool_flag "${COLIMA_FORWARD_SSH_AGENT}"; then
+if bool_flag "${HARBOUR_COLIM_FORWARD_SSH_AGENT}"; then
   cmd+=(--ssh-agent)
 fi
 
-if bool_flag "${COLIMA_NETWORK_ADDRESS}"; then
+if bool_flag "${HARBOUR_COLIM_NETWORK_ADDRESS}"; then
   cmd+=(--network-address)
 fi
 
@@ -158,7 +133,7 @@ current_mounts=$(current_mount_lines | sort)
 
 if colima_status; then
   if [[ "${desired_mounts}" != "${current_mounts}" ]]; then
-    printf "Configured mounts differ from the running Colima profile %s.\n" "${COLIMA_PROFILE}"
+    printf "Configured mounts differ from the running Harbour profile %s.\n" "${HARBOUR_COLIM_PROFILE}"
     printf "\nDesired mounts:\n"
     while IFS='|' read -r host mode; do
       [[ -n "${host}" ]] || continue
@@ -175,13 +150,13 @@ if colima_status; then
       printf "Aborted without restarting Colima.\n" >&2
       exit 1
     fi
-    colima stop -p "${COLIMA_PROFILE}"
+    colima stop -p "${HARBOUR_COLIM_PROFILE}"
     printf "Executing:\n  "
     printf "%q " "${cmd[@]}"
     printf "\n"
     "${cmd[@]}"
   else
-    printf "Colima profile %s is already running.\n" "${COLIMA_PROFILE}"
+    printf "Harbour profile %s is already running.\n" "${HARBOUR_COLIM_PROFILE}"
   fi
 else
   printf "Executing:\n  "
@@ -202,7 +177,7 @@ host_uid=$(id -u)
 host_gid=$(id -g)
 
 cd "${HARBOUR_WORKSPACE_ROOT}"
-colima ssh -p "${COLIMA_PROFILE}" -- /usr/bin/bash -s -- \
+colima ssh -p "${HARBOUR_COLIM_PROFILE}" -- /usr/bin/bash -s -- \
   "${selected_agent}" \
   "${requested_version}" \
   "${harbour_harness_agents}" \
@@ -332,11 +307,13 @@ case "${selected_agent}" in
 esac
 EOF
 
-if [[ "${selected_agent}" != "${previous_active_agent}" ]]; then
-  HARBOUR_ACTIVE_AGENT="${selected_agent}"
-  persist_harbour_env
-  printf "Saved HARBOUR_ACTIVE_AGENT=%s to %s.\n" "${HARBOUR_ACTIVE_AGENT}" "${HARBOUR_ENV}"
-fi
+HARBOUR_ACTIVE_AGENT="${selected_agent}"
+save_env_var HARBOUR_HARNESS_PATH "${HARBOUR_HARNESS_PATH}"
+save_env_var HARBOUR_WORKSPACE_ROOT "${HARBOUR_WORKSPACE_ROOT}"
+save_env_var HARBOUR_ACTIVE_AGENT "${HARBOUR_ACTIVE_AGENT}"
+load_harbour_env
+refresh_context_files
+printf "Saved Harbour env values to %s.\n" "${HARBOUR_ENV}"
 
 case "${selected_agent}" in
   codex)

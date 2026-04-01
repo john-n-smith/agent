@@ -4,30 +4,35 @@ set -euo pipefail
 
 SCRIPT_DIR=${0:A:h}
 PROJECT_ROOT=${SCRIPT_DIR:h}
-COLIMA_ENV="${PROJECT_ROOT}/config/colima.env"
-HARBOUR_ENV_DIR="${HOME}/.config/agent-harbour"
+HARBOUR_ENV_DIR="${HOME}/.config/harbour"
 HARBOUR_ENV="${HARBOUR_ENV_DIR}/env"
-if [[ -f "${COLIMA_ENV}" ]]; then
-  source "${COLIMA_ENV}"
-fi
+HARBOUR_ENV_TEMPLATE="${PROJECT_ROOT}/config/harbour.env.example"
 
-if [[ -f "${HARBOUR_ENV}" ]]; then
-  source "${HARBOUR_ENV}"
-fi
-
-refresh_context_files() {
-  RUNTIME_ENV="${HARBOUR_HARNESS_PATH:-}/runtime.env"
-  REPOS_FILE="${HARBOUR_HARNESS_PATH:-}/repos.yaml"
-}
-
-load_runtime_env() {
-  refresh_context_files
-  if [[ -z "${HARBOUR_WORKSPACE_ROOT:-}" && -f "${RUNTIME_ENV}" ]]; then
-    source "${RUNTIME_ENV}"
+load_harbour_env() {
+  if [[ -f "${HARBOUR_ENV}" ]]; then
+    source "${HARBOUR_ENV}"
   fi
 }
 
-load_runtime_env
+bootstrap_harbour_env() {
+  mkdir -p "${HARBOUR_ENV_DIR}"
+  if [[ -f "${HARBOUR_ENV}" ]]; then
+    return 0
+  fi
+  if [[ ! -f "${HARBOUR_ENV_TEMPLATE}" ]]; then
+    printf "%s is missing.\n" "${HARBOUR_ENV_TEMPLATE}" >&2
+    exit 1
+  fi
+  cp "${HARBOUR_ENV_TEMPLATE}" "${HARBOUR_ENV}"
+  printf "Created Harbour env %s from %s.\n" "${HARBOUR_ENV}" "${HARBOUR_ENV_TEMPLATE}"
+}
+
+refresh_context_files() {
+  REPOS_FILE="${HARBOUR_HARNESS_PATH:-}/repos.yaml"
+}
+
+load_harbour_env
+refresh_context_files
 
 expand_home_path() {
   local path=$1
@@ -37,20 +42,31 @@ expand_home_path() {
 require_var() {
   local name=$1
   if [[ -z "${(P)name:-}" ]]; then
-    printf "%s is not set. Configure it in %s.\n" "${name}" "${HARBOUR_ENV}" >&2
+    printf "%s is not set. Configure it in %s or run make provision.\n" "${name}" "${HARBOUR_ENV}" >&2
     exit 1
   fi
 }
 
-persist_harbour_env() {
-  require_var HARBOUR_HARNESS_PATH
-  mkdir -p "${HARBOUR_ENV_DIR}"
-  cat > "${HARBOUR_ENV}" <<EOF
-HARBOUR_HARNESS_PATH=${HARBOUR_HARNESS_PATH}
-HARBOUR_WORKSPACE_ROOT=${HARBOUR_WORKSPACE_ROOT:-}
-HARBOUR_ACTIVE_AGENT=${HARBOUR_ACTIVE_AGENT:-}
-EOF
-  refresh_context_files
+escape_sed_replacement() {
+  printf "%s" "$1" | sed 's/[&|\\]/\\&/g'
+}
+
+save_env_var() {
+  local name=$1
+  local value=$2
+  local escaped_value tmp
+
+  escaped_value=$(escape_sed_replacement "${value}")
+  tmp=$(mktemp)
+
+  if grep -q "^${name}=" "${HARBOUR_ENV}"; then
+    sed -e "s|^${name}=.*$|${name}=${escaped_value}|" "${HARBOUR_ENV}" > "${tmp}"
+  else
+    cat "${HARBOUR_ENV}" > "${tmp}"
+    printf "%s=%s\n" "${name}" "${value}" >> "${tmp}"
+  fi
+
+  mv "${tmp}" "${HARBOUR_ENV}"
 }
 
 resolved_repo_lines() {
@@ -111,8 +127,8 @@ desired_mount_lines() {
 }
 
 current_mount_lines() {
-  require_var COLIMA_PROFILE
-  local profile_config="${HOME}/.colima/${COLIMA_PROFILE}/colima.yaml"
+  require_var HARBOUR_COLIM_PROFILE
+  local profile_config="${HOME}/.colima/${HARBOUR_COLIM_PROFILE}/colima.yaml"
   if [[ ! -f "${profile_config}" ]]; then
     return 0
   fi
@@ -139,6 +155,6 @@ bool_flag() {
 }
 
 colima_status() {
-  require_var COLIMA_PROFILE
-  colima status -p "${COLIMA_PROFILE}" >/dev/null 2>&1
+  require_var HARBOUR_COLIM_PROFILE
+  colima status -p "${HARBOUR_COLIM_PROFILE}" >/dev/null 2>&1
 }
