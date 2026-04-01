@@ -16,8 +16,8 @@ if [[ -f "${HARBOUR_ENV}" ]]; then
 fi
 
 refresh_context_files() {
-  RUNTIME_ENV="${HARBOUR_CONTEXT_HOST_PATH:-}/runtime.env"
-  REPOS_FILE="${HARBOUR_CONTEXT_HOST_PATH:-}/repos.yaml"
+  RUNTIME_ENV="${HARBOUR_HARNESS_PATH:-}/runtime.env"
+  REPOS_FILE="${HARBOUR_HARNESS_PATH:-}/repos.yaml"
 }
 
 load_runtime_env() {
@@ -43,10 +43,10 @@ require_var() {
 }
 
 persist_harbour_env() {
-  require_var HARBOUR_CONTEXT_HOST_PATH
+  require_var HARBOUR_HARNESS_PATH
   mkdir -p "${HARBOUR_ENV_DIR}"
   cat > "${HARBOUR_ENV}" <<EOF
-HARBOUR_CONTEXT_HOST_PATH=${HARBOUR_CONTEXT_HOST_PATH}
+HARBOUR_HARNESS_PATH=${HARBOUR_HARNESS_PATH}
 HARBOUR_WORKSPACE_ROOT=${HARBOUR_WORKSPACE_ROOT:-}
 HARBOUR_ACTIVE_AGENT=${HARBOUR_ACTIVE_AGENT:-}
 EOF
@@ -54,9 +54,9 @@ EOF
 }
 
 resolved_repo_lines() {
-  require_var HARBOUR_CONTEXT_HOST_PATH
+  require_var HARBOUR_HARNESS_PATH
   if [[ ! -f "${REPOS_FILE}" ]]; then
-    printf "%s is missing. Create it in harbour-context.\n" "${REPOS_FILE}" >&2
+    printf "%s is missing. Create it in harbour-harness.\n" "${REPOS_FILE}" >&2
     exit 1
   fi
   while IFS= read -r raw_host; do
@@ -102,8 +102,8 @@ repo_lines() {
 }
 
 desired_mount_lines() {
-  require_var HARBOUR_CONTEXT_HOST_PATH
-  printf "%s|rw\n" "${HARBOUR_CONTEXT_HOST_PATH}"
+  require_var HARBOUR_HARNESS_PATH
+  printf "%s|rw\n" "${HARBOUR_HARNESS_PATH}"
   while IFS= read -r host; do
     [[ -n "${host}" ]] || continue
     printf "%s|rw\n" "${host}"
@@ -129,8 +129,8 @@ current_mount_lines() {
 }
 
 state_root() {
-  require_var HARBOUR_CONTEXT_HOST_PATH
-  printf "%s\n" "${HARBOUR_CONTEXT_HOST_PATH}"
+  require_var HARBOUR_HARNESS_PATH
+  printf "%s\n" "${HARBOUR_HARNESS_PATH}"
 }
 
 bool_flag() {
