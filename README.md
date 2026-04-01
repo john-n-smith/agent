@@ -16,7 +16,7 @@ Run agents across all your repos in an isolated, shareable sandbox.
    - `AGENTS.md` - your agent instructions. Will be symlinked to `CLAUDE.md` on provision, if you're using Claude
    - `skills/` - agent skills
 
-   See https://github.com/agent-harbour/harbour-context-skeleton for an example.
+   See https://github.com/agent-harbour/harbour-harness-template for an example.
 
    Relatvie paths in `repos.yaml` are resolved from `HARBOUR_WORKSPACE_ROOT`
 
@@ -28,7 +28,7 @@ Run agents across all your repos in an isolated, shareable sandbox.
 
    `make provision` will prompt for
 
-   - `HARBOUR_CONTEXT_HOST_PATH` - the path to your harness
+   - `HARBOUR_HARNESS_PATH` - the path to your harness
    - `HARBOUR_WORKSPACE_ROOT` = where you keep your repos. Accepts `~`
    - Claude or Codex
 
@@ -50,13 +50,13 @@ Run agents across all your repos in an isolated, shareable sandbox.
 `make provision` will:
 
 - Start the Colima profile
-- Mount `harbour-context`
-- Mount the work repos from `harbour-context/repos.yaml`
+- Mount `harbour-harness`
+- Mount the work repos from `harbour-harness/repos.yaml`
 - Warn and skip any repo mount whose host directory does not exist
 - Install or update only the selected agent plus shared tooling in the VM
 - Remove the inactive agent from the VM
 - Link `AGENTS.md` or `CLAUDE.md` at `HARBOUR_WORKSPACE_ROOT`
-- Sync custom skills from `harbour-context/skills` to the selected agent's skills directory
+- Sync custom skills from `harbour-harness/skills` to the selected agent's skills directory
 
 ## Layout
 
