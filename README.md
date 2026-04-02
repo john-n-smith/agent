@@ -41,7 +41,7 @@ brew install harbour
 
    Run `harbour provision` again after changing `repos`, `AGENTS.md` or `skills/`
 
-6. Start the agent
+3. Start the agent
 
    ```sh
    harbour agent

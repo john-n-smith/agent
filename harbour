@@ -2,12 +2,14 @@
 
 set -euo pipefail
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 
 if [[ -d "${SCRIPT_DIR}/scripts" ]]; then
   PROJECT_ROOT="${SCRIPT_DIR}"
 elif [[ -d "${SCRIPT_DIR}/libexec/scripts" ]]; then
   PROJECT_ROOT="${SCRIPT_DIR}/libexec"
+elif [[ -d "${SCRIPT_DIR}/../libexec/scripts" ]]; then
+  PROJECT_ROOT=$(cd -P -- "${SCRIPT_DIR}/../libexec" && pwd -P)
 else
   printf "Could not find Harbour support files relative to %s.\n" "${SCRIPT_DIR}" >&2
   exit 1

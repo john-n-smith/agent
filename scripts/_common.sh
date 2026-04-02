@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-PROJECT_ROOT=${HARBOUR_PROJECT_ROOT:-$(cd -- "${SCRIPT_DIR}/.." && pwd)}
+SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+PROJECT_ROOT=${HARBOUR_PROJECT_ROOT:-$(cd -P -- "${SCRIPT_DIR}/.." && pwd -P)}
 HARBOUR_ENV_DIR="${HOME}/.config/harbour"
 HARBOUR_ENV="${HARBOUR_ENV_DIR}/env"
 HARBOUR_ENV_TEMPLATE="${PROJECT_ROOT}/config/harbour.env.example"
@@ -72,10 +72,10 @@ save_env_var() {
 absolute_path() {
   local path=$1
   if [[ -d "${path}" ]]; then
-    (cd -- "${path}" && pwd)
+    (cd -P -- "${path}" && pwd -P)
   else
     local parent
-    parent=$(cd -- "$(dirname -- "${path}")" && pwd)
+    parent=$(cd -P -- "$(dirname -- "${path}")" && pwd -P)
     printf "%s/%s\n" "${parent}" "$(basename -- "${path}")"
   fi
 }
