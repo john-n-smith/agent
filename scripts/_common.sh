@@ -82,12 +82,17 @@ save_env_var() {
 
 absolute_path() {
   local path=$1
+  local parent_dir
+  local parent
   path=$(expand_home_path "${path}")
   if [[ -d "${path}" ]]; then
     (cd -P -- "${path}" && pwd -P)
   else
-    local parent
-    parent=$(cd -P -- "$(dirname -- "${path}")" && pwd -P)
+    parent_dir=$(dirname -- "${path}")
+    if ! parent=$(cd -P -- "${parent_dir}" >/dev/null 2>&1 && pwd -P); then
+      printf "%s\n" "${path}"
+      return 0
+    fi
     printf "%s/%s\n" "${parent}" "$(basename -- "${path}")"
   fi
 }

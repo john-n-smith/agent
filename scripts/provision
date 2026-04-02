@@ -351,4 +351,4 @@ case "${selected_agent}" in
 esac
 
 printf "Default command is harbour %s.\n" "${HARBOUR_DEFAULT_COMMAND}"
-printf "Run harbour to use the default command, or run harbour yolo or harbour agent explicitly.\n"
+printf "Run harbour to use the default command, or run harbour agent, harbour yolo, or harbour shell explicitly.\n"

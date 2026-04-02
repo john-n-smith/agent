@@ -49,13 +49,20 @@ brew install harbour
    - `yolo` - launch the provisioned agent with relaxed permissions
    - `shell` - open a shell in the Harbour VM
 
-4. Start the agent
+4. Start with your default command
 
    ```sh
    harbour
    ```
-   or
-   
+
+   Start the agent explicitly with
+
+   ```sh
+   harbour agent
+   ```
+
+   Or start it with relaxed permissions using
+
    ```sh
    harbour yolo
    ```
