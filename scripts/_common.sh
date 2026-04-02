@@ -71,6 +71,7 @@ save_env_var() {
 
 absolute_path() {
   local path=$1
+  path=$(expand_home_path "${path}")
   if [[ -d "${path}" ]]; then
     (cd -P -- "${path}" && pwd -P)
   else
