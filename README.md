@@ -41,10 +41,18 @@ brew install harbour
 
    Run `harbour provision` again after changing `repos.yaml`, `AGENTS.md` or `skills/`
 
-3. Start the agent
+3. Choose the default `harbour` command during provision
+
+   `harbour provision` will prompt for `HARBOUR_DEFAULT_COMMAND`
+
+   - `agent` - launch the provisioned agent
+   - `yolo` - launch the provisioned agent with relaxed permissions
+   - `shell` - open a shell in the Harbour VM
+
+4. Start the agent
 
    ```sh
-   harbour agent
+   harbour
    ```
    or
    
@@ -65,6 +73,7 @@ brew install harbour
 - Remove the inactive agent from the VM
 - Link `AGENTS.md` or `CLAUDE.md` at `HARBOUR_WORKSPACE_ROOT`
 - Sync custom skills from `harbour-harness/skills` to the selected agent's skills directory
+- Save `HARBOUR_DEFAULT_COMMAND` for plain `harbour` invocations
 
 ## Layout
 
@@ -82,4 +91,5 @@ harbour provision
 harbour shell
 harbour agent
 harbour yolo
+harbour
 ```

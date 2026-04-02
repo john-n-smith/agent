@@ -56,7 +56,7 @@ The startup scripts are deliberately thin wrappers:
 - Missing repo mount directories are warned and skipped during provision
 - `config/harbour.env.example` is a packaged example config, not a runtime input
 - `scripts/provision` copies `config/harbour.env.example` to `~/.config/harbour/env` on first run
-- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, prompts for the active agent, installs only that agent in the VM, removes the inactive agent, links the matching workspace instruction file, and syncs skills to the selected agent's skills directory
+- `scripts/provision` starts the VM if needed, prompts before restarting when mount config drifts, prompts for the active agent and default `harbour` command, installs only that agent in the VM, removes the inactive agent, links the matching workspace instruction file, syncs skills to the selected agent's skills directory, and saves the selected default command in the local Harbour env
 - `scripts/agent` launches the provisioned agent in the VM
 
 This keeps shared VM defaults in config, private runtime state in

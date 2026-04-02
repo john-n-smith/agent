@@ -60,9 +60,15 @@ printf "HARBOUR_WORKSPACE_ROOT=%s\n" "${HARBOUR_WORKSPACE_ROOT}"
 
 previous_active_agent="${HARBOUR_ACTIVE_AGENT:-}"
 default_agent="${previous_active_agent:-codex}"
+previous_default_command="${HARBOUR_DEFAULT_COMMAND:-}"
+default_command="${previous_default_command:-agent}"
 
 if [[ -n "${previous_active_agent}" ]]; then
   printf "HARBOUR_ACTIVE_AGENT=%s\n" "${previous_active_agent}"
+fi
+
+if [[ -n "${previous_default_command}" ]]; then
+  printf "HARBOUR_DEFAULT_COMMAND=%s\n" "${previous_default_command}"
 fi
 
 while true; do
@@ -80,6 +86,25 @@ while true; do
       ;;
     *)
       printf "Enter codex or claude.\n" >&2
+      ;;
+  esac
+done
+
+while true; do
+  printf "Select the default harbour command [agent/yolo/shell] [%s]: " "${default_command}"
+  read -r reply
+  reply=$(printf "%s" "${reply}" | tr '[:upper:]' '[:lower:]')
+  if [[ -z "${reply}" ]]; then
+    selected_default_command="${default_command}"
+    break
+  fi
+  case "${reply}" in
+    agent|shell|yolo)
+      selected_default_command="${reply}"
+      break
+      ;;
+    *)
+      printf "Enter agent, shell or yolo.\n" >&2
       ;;
   esac
 done
@@ -307,9 +332,11 @@ esac
 EOF
 
 HARBOUR_ACTIVE_AGENT="${selected_agent}"
+HARBOUR_DEFAULT_COMMAND="${selected_default_command}"
 save_env_var HARBOUR_HARNESS_PATH "${HARBOUR_HARNESS_PATH}"
 save_env_var HARBOUR_WORKSPACE_ROOT "${HARBOUR_WORKSPACE_ROOT}"
 save_env_var HARBOUR_ACTIVE_AGENT "${HARBOUR_ACTIVE_AGENT}"
+save_env_var HARBOUR_DEFAULT_COMMAND "${HARBOUR_DEFAULT_COMMAND}"
 load_harbour_env
 refresh_context_files
 printf "Saved Harbour env values to %s.\n" "${HARBOUR_ENV}"
@@ -323,4 +350,5 @@ case "${selected_agent}" in
     ;;
 esac
 
-printf "Run harbour yolo or harbour agent to start.\n"
+printf "Default command is harbour %s.\n" "${HARBOUR_DEFAULT_COMMAND}"
+printf "Run harbour to use the default command, or run harbour yolo or harbour agent explicitly.\n"
