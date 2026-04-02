@@ -1,13 +1,14 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 
 set -euo pipefail
 
-source "${0:A:h}/_common.sh"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+source "${SCRIPT_DIR}/_common.sh"
 require_var HARBOUR_COLIM_PROFILE
 require_var HARBOUR_WORKSPACE_ROOT
 
 if ! colima_status; then
-  printf "Harbour profile %s is not running. Start it with make provision.\n" "${HARBOUR_COLIM_PROFILE}" >&2
+  printf "Harbour profile %s is not running. Start it with harbour provision.\n" "${HARBOUR_COLIM_PROFILE}" >&2
   exit 1
 fi
 

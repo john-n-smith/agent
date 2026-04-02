@@ -1,9 +1,9 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 
 set -euo pipefail
 
-SCRIPT_DIR=${0:A:h}
-PROJECT_ROOT=${SCRIPT_DIR:h}
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_ROOT=${HARBOUR_PROJECT_ROOT:-$(cd -- "${SCRIPT_DIR}/.." && pwd)}
 HARBOUR_ENV_DIR="${HOME}/.config/harbour"
 HARBOUR_ENV="${HARBOUR_ENV_DIR}/env"
 HARBOUR_ENV_TEMPLATE="${PROJECT_ROOT}/config/harbour.env.example"
@@ -41,8 +41,8 @@ expand_home_path() {
 
 require_var() {
   local name=$1
-  if [[ -z "${(P)name:-}" ]]; then
-    printf "%s is not set. Configure it in %s or run make provision.\n" "${name}" "${HARBOUR_ENV}" >&2
+  if [[ -z "${!name:-}" ]]; then
+    printf "%s is not set. Configure it in %s or run harbour provision.\n" "${name}" "${HARBOUR_ENV}" >&2
     exit 1
   fi
 }
@@ -69,6 +69,17 @@ save_env_var() {
   mv "${tmp}" "${HARBOUR_ENV}"
 }
 
+absolute_path() {
+  local path=$1
+  if [[ -d "${path}" ]]; then
+    (cd -- "${path}" && pwd)
+  else
+    local parent
+    parent=$(cd -- "$(dirname -- "${path}")" && pwd)
+    printf "%s/%s\n" "${parent}" "$(basename -- "${path}")"
+  fi
+}
+
 resolved_repo_lines() {
   require_var HARBOUR_HARNESS_PATH
   if [[ ! -f "${REPOS_FILE}" ]]; then
@@ -84,7 +95,7 @@ resolved_repo_lines() {
     fi
 
     require_var HARBOUR_WORKSPACE_ROOT
-    printf "%s/%s\n" "${HARBOUR_WORKSPACE_ROOT:A}" "${raw_host}"
+    printf "%s/%s\n" "$(absolute_path "${HARBOUR_WORKSPACE_ROOT}")" "${raw_host}"
   done < <(
     awk '
       /^[[:space:]]*-[[:space:]]*host_path:[[:space:]]*/ {
@@ -151,7 +162,8 @@ state_root() {
 
 bool_flag() {
   local value=$1
-  [[ "${value:l}" == "true" ]]
+  value=$(printf "%s" "${value}" | tr '[:upper:]' '[:lower:]')
+  [[ "${value}" == "true" ]]
 }
 
 colima_status() {

@@ -1,8 +1,9 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 
 set -euo pipefail
 
-source "${0:A:h}/_common.sh"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+source "${SCRIPT_DIR}/_common.sh"
 bootstrap_harbour_env
 load_harbour_env
 refresh_context_files
@@ -69,7 +70,7 @@ fi
 while true; do
   printf "Select the agent to provision [codex/claude] [%s]: " "${default_agent}"
   read -r reply
-  reply="${reply:l}"
+  reply=$(printf "%s" "${reply}" | tr '[:upper:]' '[:lower:]')
   if [[ -z "${reply}" ]]; then
     selected_agent="${default_agent}"
     break
@@ -324,4 +325,4 @@ case "${selected_agent}" in
     ;;
 esac
 
-printf "Run make yolo or make agent to start.\n"
+printf "Run harbour yolo or harbour agent to start.\n"

@@ -8,6 +8,13 @@ Run agents across all your repos in an isolated, shareable sandbox.
 - Keep your existing Docker workflow unchanged
 - Choose your agent (Claude or Codex) at provisioning time
 
+## Install
+
+```sh
+brew tap agent-harbour/harbour
+brew install harbour
+```
+
 ## Quick start
 
 1. Create your harness
@@ -23,31 +30,31 @@ Run agents across all your repos in an isolated, shareable sandbox.
 2. Run provision
 
    ```sh
-   make provision
+   harbour provision
    ```
 
-   `make provision` will create `~/.config/harbour/env` from `config/harbour.env.example` if it does not exist, then prompt for
+   `harbour provision` will create `~/.config/harbour/env` from `config/harbour.env.example` if it does not exist, then prompt for
 
    - `HARBOUR_HARNESS_PATH` - the path to your harness
    - `HARBOUR_WORKSPACE_ROOT` = where you keep your repos. Accepts `~`
    - Claude or Codex
 
-   Run `make provision` again after changing `repos`, `AGENTS.md` or `skills/`
+   Run `harbour provision` again after changing `repos`, `AGENTS.md` or `skills/`
 
 6. Start the agent
 
    ```sh
-   make agent
+   harbour agent
    ```
    or
    
-   ```
-   make yolo
+   ```sh
+   harbour yolo
    ```
 
 ## Provisioning
 
-`make provision` will:
+`harbour provision` will:
 
 - Create `~/.config/harbour/env` from `config/harbour.env.example` if needed
 - Start the configured Harbour profile in Colima
@@ -61,7 +68,7 @@ Run agents across all your repos in an isolated, shareable sandbox.
 
 ## Layout
 
-- `Makefile`: Stable entry points
+- `harbour`: Stable entry point
 - `config/harbour.env.example`: Example local Harbour config
 - `scripts/`: Provisioning and launch scripts
 - `docs/architecture.md`: Runtime model
@@ -70,9 +77,9 @@ Run agents across all your repos in an isolated, shareable sandbox.
 ## Usage
 
 ```sh
-make help
-make provision
-make shell
-make agent
-make yolo
+harbour help
+harbour provision
+harbour shell
+harbour agent
+harbour yolo
 ```

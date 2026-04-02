@@ -33,7 +33,7 @@ Recommended host-side split:
 
 - `harbour`
   Shareable harness repo
-  Holds `Makefile`, `config/`, `scripts/`, `docs/`, and harness ADRs
+  Holds `harbour`, `config/`, `scripts/`, `docs/`, and harness ADRs
 - `harbour-harness`
   Private state repo
   Holds `AGENTS.md`, `repos.yaml`, and any other private local files
@@ -60,7 +60,7 @@ The startup scripts are deliberately thin wrappers:
 - `scripts/agent` launches the provisioned agent in the VM
 
 This keeps shared VM defaults in config, private runtime state in
-`harbour-harness`, and `make` as the stable entry point.
+`harbour-harness`, and `harbour` as the stable entry point.
 
 Isolation comes from the VM boundary, but any path mounted from the host into
 the VM is intentionally shared. Narrow mounts are therefore part of the safety
