@@ -93,10 +93,14 @@ absolute_path() {
 }
 
 resolved_repo_lines() {
+  local workspace_root=""
   require_var HARBOUR_HARNESS_PATH
   if [[ ! -f "${REPOS_FILE}" ]]; then
     printf "%s is missing. Create it in harbour-harness.\n" "${REPOS_FILE}" >&2
     exit 1
+  fi
+  if [[ -n "${HARBOUR_WORKSPACE_ROOT:-}" ]]; then
+    workspace_root=$(absolute_path "${HARBOUR_WORKSPACE_ROOT}")
   fi
   while IFS= read -r raw_host; do
     [[ -n "${raw_host}" ]] || continue
@@ -107,7 +111,7 @@ resolved_repo_lines() {
     fi
 
     require_var HARBOUR_WORKSPACE_ROOT
-    printf "%s/%s\n" "$(absolute_path "${HARBOUR_WORKSPACE_ROOT}")" "${raw_host}"
+    printf "%s/%s\n" "${workspace_root}" "${raw_host}"
   done < <(
     awk '
       /^[[:space:]]*-[[:space:]]*host_path:[[:space:]]*/ {
