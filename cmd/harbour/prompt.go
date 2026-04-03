@@ -7,11 +7,9 @@ import (
 	"strings"
 )
 
-var stdinReader = bufio.NewReader(os.Stdin)
-
 func promptLine(prompt string) (string, error) {
 	fmt.Fprint(os.Stderr, prompt)
-	line, err := stdinReader.ReadString('\n')
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil && len(line) == 0 {
 		return "", err
 	}

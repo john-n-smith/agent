@@ -22,25 +22,25 @@ make build
    - `AGENTS.md` contains shared instructions
    - `skills/` contains optional custom skills
 
-See https://github.com/agent-harbour/harbour-harness-template for an example.
+   See https://github.com/agent-harbour/harbour-harness-template for an example.
 
-Relative `host_path` values in `repos.yaml` are resolved from `workspace_root`.
+   Relative `host_path` values in `repos.yaml` are resolved from `workspace_root`.
 
 2. Provision Harbour
 
-```sh
-./bin/harbour provision
-```
+   ```sh
+   ./bin/harbour provision
+   ```
 
-The first run creates a config file at the platform config location for Harbour.
-On Linux this is typically `~/.config/harbour/config.json`.
+   The first run creates a config file at the platform config location for Harbour.
+   On Linux this is typically `~/.config/harbour/config.json`.
 
-Provision prompts for:
+   Provision prompts for:
 
-- `harness_path`
-- `workspace_root`
-- The active agent
-- The default `harbour` command
+   - `harness_path`
+   - `workspace_root`
+   - The active agent
+   - The default `harbour` command
 
 3. Run the agent
 
