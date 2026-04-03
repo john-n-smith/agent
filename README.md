@@ -18,9 +18,9 @@ make build
 
 1. Create your harness
 
-- `repos.yaml` lists repo mount paths
-- `AGENTS.md` contains shared instructions
-- `skills/` contains optional custom skills
+   - `repos.yaml` lists repo mount paths
+   - `AGENTS.md` contains shared instructions
+   - `skills/` contains optional custom skills
 
 See https://github.com/agent-harbour/harbour-harness-template for an example.
 

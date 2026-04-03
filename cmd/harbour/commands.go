@@ -79,9 +79,7 @@ func runProvision() error {
 	default:
 		fmt.Fprintf(os.Stderr, "Ignoring invalid active_agent=%s in %s. Using %s.\n", cfg.ActiveAgent, configPath, defaultAgent)
 	}
-	if cfg.ActiveAgent != "" {
-		fmt.Printf("active_agent=%s\n", cfg.ActiveAgent)
-	}
+	fmt.Printf("active_agent=%s\n", defaultAgent)
 
 	defaultCommand := "agent"
 	switch cfg.DefaultCommand {
@@ -91,9 +89,7 @@ func runProvision() error {
 	default:
 		fmt.Fprintf(os.Stderr, "Ignoring invalid default_command=%s in %s. Using %s.\n", cfg.DefaultCommand, configPath, defaultCommand)
 	}
-	if cfg.DefaultCommand != "" {
-		fmt.Printf("default_command=%s\n", cfg.DefaultCommand)
-	}
+	fmt.Printf("default_command=%s\n", defaultCommand)
 
 	selectedAgent, err := promptChoice(
 		fmt.Sprintf("Select the agent to provision [codex/claude] [%s]: ", defaultAgent),
