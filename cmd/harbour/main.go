@@ -6,6 +6,11 @@ import (
 )
 
 var version = "dev"
+var (
+	runProvisionCommand = runProvision
+	runShellCommand     = runShell
+	runAgentCommand     = runAgent
+)
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -54,22 +59,22 @@ func run(args []string) error {
 		if err := requireNoArgs(args); err != nil {
 			return err
 		}
-		return runProvision()
+		return runProvisionCommand()
 	case "shell":
 		if err := requireNoArgs(args); err != nil {
 			return err
 		}
-		return runShell()
+		return runShellCommand()
 	case "agent":
 		if err := requireNoArgs(args); err != nil {
 			return err
 		}
-		return runAgent(false)
+		return runAgentCommand(false)
 	case "yolo":
 		if err := requireNoArgs(args); err != nil {
 			return err
 		}
-		return runAgent(true)
+		return runAgentCommand(true)
 	default:
 		return fmt.Errorf("unknown command: %s", command)
 	}

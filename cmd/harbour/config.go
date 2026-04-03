@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 )
 
+var userConfigDir = os.UserConfigDir
+
 type Config struct {
 	ColimaProfile         string `json:"colima_profile"`
 	ColimaRuntime         string `json:"colima_runtime"`
@@ -48,7 +50,7 @@ func defaultConfig() Config {
 }
 
 func configPath() (string, error) {
-	configDir, err := os.UserConfigDir()
+	configDir, err := userConfigDir()
 	if err != nil {
 		return "", err
 	}
