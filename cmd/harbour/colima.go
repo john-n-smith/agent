@@ -72,35 +72,46 @@ func desiredMountLines(harnessPath string, repoHosts []string) []string {
 }
 
 func formatMountDiff(current []string, desired []string) []string {
-	currentSet := make(map[string]struct{}, len(current))
-	desiredSet := make(map[string]struct{}, len(desired))
-	all := make(map[string]struct{}, len(current)+len(desired))
+	currentByLocation := groupMountsByLocation(current)
+	desiredByLocation := groupMountsByLocation(desired)
 
-	for _, mount := range current {
-		currentSet[mount] = struct{}{}
-		all[mount] = struct{}{}
+	allLocations := make(map[string]struct{}, len(currentByLocation)+len(desiredByLocation))
+	for location := range currentByLocation {
+		allLocations[location] = struct{}{}
 	}
-	for _, mount := range desired {
-		desiredSet[mount] = struct{}{}
-		all[mount] = struct{}{}
+	for location := range desiredByLocation {
+		allLocations[location] = struct{}{}
 	}
 
-	keys := make([]string, 0, len(all))
-	for mount := range all {
-		keys = append(keys, mount)
+	locations := make([]string, 0, len(allLocations))
+	for location := range allLocations {
+		locations = append(locations, location)
 	}
-	sort.Strings(keys)
+	sort.Strings(locations)
 
 	var diff []string
-	for _, mount := range keys {
-		_, inCurrent := currentSet[mount]
-		_, inDesired := desiredSet[mount]
+	for _, location := range locations {
+		currentMounts := currentByLocation[location]
+		desiredMounts := desiredByLocation[location]
 
-		switch {
-		case inCurrent && !inDesired:
-			diff = append(diff, "- "+humanizeMountLine(mount))
-		case !inCurrent && inDesired:
-			diff = append(diff, "+ "+humanizeMountLine(mount))
+		currentSet := make(map[string]struct{}, len(currentMounts))
+		desiredSet := make(map[string]struct{}, len(desiredMounts))
+		for _, mount := range currentMounts {
+			currentSet[mount] = struct{}{}
+		}
+		for _, mount := range desiredMounts {
+			desiredSet[mount] = struct{}{}
+		}
+
+		for _, mount := range currentMounts {
+			if _, ok := desiredSet[mount]; !ok {
+				diff = append(diff, "- "+humanizeMountLine(mount))
+			}
+		}
+		for _, mount := range desiredMounts {
+			if _, ok := currentSet[mount]; !ok {
+				diff = append(diff, "+ "+humanizeMountLine(mount))
+			}
 		}
 	}
 
@@ -113,6 +124,26 @@ func humanizeMountLine(mount string) string {
 		return mount
 	}
 	return fmt.Sprintf("%s (%s)", parts[0], parts[1])
+}
+
+func groupMountsByLocation(mounts []string) map[string][]string {
+	grouped := make(map[string][]string)
+	for _, mount := range mounts {
+		location := mountLocation(mount)
+		grouped[location] = append(grouped[location], mount)
+	}
+	for location := range grouped {
+		sort.Strings(grouped[location])
+	}
+	return grouped
+}
+
+func mountLocation(mount string) string {
+	parts := strings.SplitN(mount, "|", 2)
+	if len(parts) == 0 {
+		return mount
+	}
+	return parts[0]
 }
 
 func normalizeMountLines(mounts []string) []string {

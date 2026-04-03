@@ -36,6 +36,12 @@ func TestFormatMountDiff(t *testing.T) {
 			desired: []string{"/repo|rw"},
 			want:    []string{"- /repo (ro)", "+ /repo (rw)"},
 		},
+		{
+			name:    "mode change keeps removal before addition",
+			current: []string{"/repo|rw"},
+			desired: []string{"/repo|ro"},
+			want:    []string{"- /repo (rw)", "+ /repo (ro)"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -53,6 +59,18 @@ func TestHumanizeMountLine(t *testing.T) {
 	want := "/repo (rw)"
 	if got != want {
 		t.Fatalf("humanizeMountLine() = %q, want %q", got, want)
+	}
+}
+
+func TestGroupMountsByLocation(t *testing.T) {
+	got := groupMountsByLocation([]string{"/b|rw", "/a|ro", "/a|rw"})
+	want := map[string][]string{
+		"/a": {"/a|ro", "/a|rw"},
+		"/b": {"/b|rw"},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("groupMountsByLocation() = %#v, want %#v", got, want)
 	}
 }
 
