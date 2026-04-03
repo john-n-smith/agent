@@ -28,6 +28,8 @@ This writes Homebrew-ready Darwin artefacts to `dist/`:
 - `harbour-v0.1.0-darwin-arm64.tar.gz`
 - `sha256sums.txt`
 
+`make dist` fetches tags from `origin`, checks out the requested tag into `build/`, and builds the release artefacts from that tagged source.
+
 Release builds inject the requested version into `harbour version`.
 
 ## Quick Start
