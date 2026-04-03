@@ -14,12 +14,12 @@ make build
 ./bin/harbour help
 ```
 
-`make build` builds for the current platform.
+`make build` builds a macOS ARM64 binary.
 
 ## Release
 
 ```sh
-make release VERSION=v0.1.0
+make dist VERSION=v0.1.0
 ```
 
 This writes Homebrew-ready Darwin artefacts to `dist/`:
