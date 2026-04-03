@@ -110,14 +110,20 @@ func TestExplicitVersionBypassesConfiguredDefaultCommand(t *testing.T) {
 	})
 	defer restore()
 
+	previousVersion := version
+	version = "test-version"
+	t.Cleanup(func() {
+		version = previousVersion
+	})
+
 	stdout, stderr := captureOutput(t, func() {
 		if err := run([]string{"version"}); err != nil {
 			t.Fatalf("run(version) returned error: %v", err)
 		}
 	})
 
-	if !strings.Contains(stdout, "harbour ") {
-		t.Fatalf("stdout did not contain version output:\n%s", stdout)
+	if stdout != "harbour test-version\n" {
+		t.Fatalf("stdout = %q, want %q", stdout, "harbour test-version\n")
 	}
 	if stderr != "" {
 		t.Fatalf("stderr was not empty:\n%s", stderr)

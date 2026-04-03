@@ -14,6 +14,26 @@ make build
 ./bin/harbour help
 ```
 
+`make build` builds a local macOS ARM64 binary.
+
+## Release
+
+```sh
+make dist VERSION=v0.1.0
+```
+
+This writes Homebrew-ready Darwin artefacts to `dist/`:
+
+- `harbour-v0.1.0-darwin-amd64.tar.gz`
+- `harbour-v0.1.0-darwin-arm64.tar.gz`
+- `sha256sums.txt`
+
+`make dist` verifies the requested tag on `origin`, clones that tag into a temporary release source checkout under `build/`, and builds the release artefacts from that remote tagged source.
+
+Release builds inject the requested version into `harbour version`.
+
+`VERSION` must match `vX.Y.Z`.
+
 ## Quick Start
 
 1. Create your harness
