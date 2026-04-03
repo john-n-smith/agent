@@ -166,15 +166,9 @@ func runProvision() error {
 	if running {
 		if !equalStringSlices(desiredMounts, currentMounts) {
 			fmt.Printf("Configured mounts differ from the running Harbour profile %s.\n", cfg.ColimaProfile)
-			fmt.Printf("\nDesired mounts:\n")
-			for _, mount := range desiredMounts {
-				parts := strings.SplitN(mount, "|", 2)
-				fmt.Printf("  %s (%s)\n", parts[0], parts[1])
-			}
-			fmt.Printf("\nCurrent mounts:\n")
-			for _, mount := range currentMounts {
-				parts := strings.SplitN(mount, "|", 2)
-				fmt.Printf("  %s (%s)\n", parts[0], parts[1])
+			fmt.Printf("\nMount diff:\n")
+			for _, line := range formatMountDiff(currentMounts, desiredMounts) {
+				fmt.Printf("  %s\n", line)
 			}
 			ok, err := promptYesNo("\nRestart Colima now to apply mount changes? [y/N] ")
 			if err != nil {
