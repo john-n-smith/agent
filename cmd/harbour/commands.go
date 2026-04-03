@@ -22,11 +22,11 @@ func runProvision() error {
 	if err != nil {
 		return err
 	}
-	configPath, err := configPath()
+	cfgPath, err := configPath()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Using Harbour config %s\n", configPath)
+	fmt.Printf("Using Harbour config %s\n", cfgPath)
 
 	if cfg.HarnessPath == "" {
 		reply, err := promptLine("Your Harbour harness path, e.g. ~/git/my-harbour-harness: ")
@@ -77,7 +77,7 @@ func runProvision() error {
 		defaultAgent = cfg.ActiveAgent
 	case "":
 	default:
-		fmt.Fprintf(os.Stderr, "Ignoring invalid active_agent=%s in %s. Using %s.\n", cfg.ActiveAgent, configPath, defaultAgent)
+		fmt.Fprintf(os.Stderr, "Ignoring invalid active_agent=%s in %s. Using %s.\n", cfg.ActiveAgent, cfgPath, defaultAgent)
 	}
 	fmt.Printf("active_agent=%s\n", defaultAgent)
 
@@ -87,7 +87,7 @@ func runProvision() error {
 		defaultCommand = cfg.DefaultCommand
 	case "":
 	default:
-		fmt.Fprintf(os.Stderr, "Ignoring invalid default_command=%s in %s. Using %s.\n", cfg.DefaultCommand, configPath, defaultCommand)
+		fmt.Fprintf(os.Stderr, "Ignoring invalid default_command=%s in %s. Using %s.\n", cfg.DefaultCommand, cfgPath, defaultCommand)
 	}
 	fmt.Printf("default_command=%s\n", defaultCommand)
 
@@ -237,7 +237,7 @@ func runProvision() error {
 	if err := saveConfig(cfg); err != nil {
 		return err
 	}
-	fmt.Printf("Saved Harbour config values to %s.\n", configPath)
+	fmt.Printf("Saved Harbour config values to %s.\n", cfgPath)
 
 	switch selectedAgent {
 	case "codex":
@@ -304,7 +304,7 @@ func runAgent(yolo bool) error {
 		return err
 	}
 
-	remoteScript := buildAgentRemoteScript(cfg, yolo, agentName, agentCommand, instructionFile)
+	remoteScript := buildAgentRemoteScript(cfg, yolo, agentCommand, instructionFile)
 	return runCommand("colima", "ssh", "-p", cfg.ColimaProfile, "--", "/usr/bin/bash", "-lc", remoteScript)
 }
 
@@ -329,7 +329,7 @@ func requireProvisionedConfig(requireHarness bool) (Config, string, error) {
 	return cfg, configPath, nil
 }
 
-func buildAgentRemoteScript(cfg Config, yolo bool, agentName string, agentCommand string, instructionFile string) string {
+func buildAgentRemoteScript(cfg Config, yolo bool, agentCommand string, instructionFile string) string {
 	yoloMode := "false"
 	if yolo {
 		yoloMode = "true"
@@ -340,7 +340,6 @@ func buildAgentRemoteScript(cfg Config, yolo bool, agentName string, agentComman
 workspace_root=%q
 harbour_harness_dir=%q
 yolo_mode=%q
-agent_name=%q
 agent_command=%q
 instruction_file=%q
 export PATH="${HOME}/.local/bin:${PATH}"
@@ -388,7 +387,7 @@ case "${agent_command}" in
 esac
 
 exec "${agent_command}" "${args[@]}"
-`, cfg.WorkspaceRoot, cfg.HarnessPath, yoloMode, agentName, agentCommand, instructionFile)
+`, cfg.WorkspaceRoot, cfg.HarnessPath, yoloMode, agentCommand, instructionFile)
 }
 
 func equalStringSlices(left []string, right []string) bool {
