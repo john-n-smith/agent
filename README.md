@@ -14,7 +14,7 @@ make build
 ./bin/harbour help
 ```
 
-`make build` builds a macOS ARM64 binary.
+`make build` builds a local macOS ARM64 binary.
 
 ## Release
 
@@ -31,6 +31,8 @@ This writes Homebrew-ready Darwin artefacts to `dist/`:
 `make dist` verifies the requested tag on `origin`, clones that tag into a temporary release source checkout under `build/`, and builds the release artefacts from that remote tagged source.
 
 Release builds inject the requested version into `harbour version`.
+
+`VERSION` must match `vX.Y.Z`.
 
 ## Quick Start
 

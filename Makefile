@@ -3,6 +3,7 @@ SHELL := /bin/bash
 VERSION ?=
 DIST_DIR := dist
 RELEASE_SRC_DIR := build/$(VERSION)
+RELEASE_TAG_PATTERN := ^v[0-9]+\.[0-9]+\.[0-9]+$$
 
 .PHONY: help build dist require-release-version prepare-dist-source fmt test
 
@@ -21,12 +22,13 @@ dist: require-release-version prepare-dist-source $(DIST_DIR)/harbour-$(VERSION)
 
 require-release-version:
 	@test -n "$(VERSION)" || (echo "VERSION is required for make dist, e.g. make dist VERSION=v0.1.0" >&2; exit 1)
+	@printf '%s\n' "$(VERSION)" | grep -Eq "$(RELEASE_TAG_PATTERN)" || (echo "VERSION must match vX.Y.Z, e.g. v0.1.0" >&2; exit 1)
 
 prepare-dist-source:
 	rm -rf $(RELEASE_SRC_DIR)
 	rm -rf $(DIST_DIR)
-	git ls-remote --exit-code --tags origin refs/tags/$(VERSION) >/dev/null || (echo "Tag $(VERSION) was not found on origin" >&2; exit 1)
-	git clone --branch $(VERSION) --depth 1 --single-branch "$$(git remote get-url origin)" $(RELEASE_SRC_DIR)
+	git ls-remote --exit-code --tags origin "refs/tags/$(VERSION)" >/dev/null || (echo "Tag $(VERSION) was not found on origin" >&2; exit 1)
+	git clone --branch "$(VERSION)" --depth 1 --single-branch "$$(git remote get-url origin)" "$(RELEASE_SRC_DIR)"
 
 $(DIST_DIR)/harbour-$(VERSION)-darwin-amd64.tar.gz:
 	mkdir -p $(DIST_DIR)/harbour-$(VERSION)-darwin-amd64
