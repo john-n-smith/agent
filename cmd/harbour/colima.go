@@ -60,8 +60,7 @@ func currentMountLines(profile string) ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	sort.Strings(mounts)
-	return mounts, nil
+	return normalizeMountLines(mounts), nil
 }
 
 func desiredMountLines(harnessPath string, repoHosts []string) []string {
@@ -69,8 +68,7 @@ func desiredMountLines(harnessPath string, repoHosts []string) []string {
 	for _, host := range repoHosts {
 		mounts = append(mounts, fmt.Sprintf("%s|rw", host))
 	}
-	sort.Strings(mounts)
-	return mounts
+	return normalizeMountLines(mounts)
 }
 
 func formatMountDiff(current []string, desired []string) []string {
@@ -115,4 +113,22 @@ func humanizeMountLine(mount string) string {
 		return mount
 	}
 	return fmt.Sprintf("%s (%s)", parts[0], parts[1])
+}
+
+func normalizeMountLines(mounts []string) []string {
+	if len(mounts) == 0 {
+		return nil
+	}
+
+	sorted := append([]string(nil), mounts...)
+	sort.Strings(sorted)
+
+	normalized := sorted[:0]
+	for _, mount := range sorted {
+		if len(normalized) > 0 && normalized[len(normalized)-1] == mount {
+			continue
+		}
+		normalized = append(normalized, mount)
+	}
+	return normalized
 }

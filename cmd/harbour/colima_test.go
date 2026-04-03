@@ -55,3 +55,35 @@ func TestHumanizeMountLine(t *testing.T) {
 		t.Fatalf("humanizeMountLine() = %q, want %q", got, want)
 	}
 }
+
+func TestNormalizeMountLines(t *testing.T) {
+	got := normalizeMountLines([]string{
+		"/workspace|rw",
+		"/repo|rw",
+		"/workspace|rw",
+		"/repo|rw",
+	})
+	want := []string{
+		"/repo|rw",
+		"/workspace|rw",
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("normalizeMountLines() = %#v, want %#v", got, want)
+	}
+}
+
+func TestFormatMountDiffIgnoresDuplicateMountLines(t *testing.T) {
+	current := normalizeMountLines([]string{
+		"/workspace|rw",
+		"/workspace|rw",
+	})
+	desired := normalizeMountLines([]string{
+		"/workspace|rw",
+	})
+
+	got := formatMountDiff(current, desired)
+	if got != nil {
+		t.Fatalf("formatMountDiff() = %#v, want nil", got)
+	}
+}
