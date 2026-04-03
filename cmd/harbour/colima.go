@@ -139,11 +139,7 @@ func groupMountsByLocation(mounts []string) map[string][]string {
 }
 
 func mountLocation(mount string) string {
-	parts := strings.SplitN(mount, "|", 2)
-	if len(parts) == 0 {
-		return mount
-	}
-	return parts[0]
+	return strings.SplitN(mount, "|", 2)[0]
 }
 
 func normalizeMountLines(mounts []string) []string {
