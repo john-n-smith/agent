@@ -1,12 +1,12 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-VERSION ?= dev
+VERSION ?=
 DIST_DIR := dist
 LDFLAGS := -X main.version=$(VERSION)
 DARWIN_AMD64_ARCHIVE := $(DIST_DIR)/harbour-$(VERSION)-darwin-amd64.tar.gz
 DARWIN_ARM64_ARCHIVE := $(DIST_DIR)/harbour-$(VERSION)-darwin-arm64.tar.gz
 
-.PHONY: help build release clean-dist fmt test
+.PHONY: help build release require-release-version clean-dist fmt test
 
 help:
 	@printf "Available targets:\n"
@@ -18,9 +18,12 @@ help:
 
 build:
 	mkdir -p bin
-	go build -ldflags "$(LDFLAGS)" -o bin/harbour ./cmd/harbour
+	go build -ldflags "-X main.version=dev" -o bin/harbour ./cmd/harbour
 
-release: clean-dist $(DARWIN_AMD64_ARCHIVE) $(DARWIN_ARM64_ARCHIVE) $(DIST_DIR)/sha256sums.txt
+release: require-release-version clean-dist $(DARWIN_AMD64_ARCHIVE) $(DARWIN_ARM64_ARCHIVE) $(DIST_DIR)/sha256sums.txt
+
+require-release-version:
+	@test -n "$(VERSION)" || (echo "VERSION is required for make release, e.g. make release VERSION=v0.1.0" >&2; exit 1)
 
 $(DARWIN_AMD64_ARCHIVE):
 	mkdir -p $(DIST_DIR)/harbour-$(VERSION)-darwin-amd64
