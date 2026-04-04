@@ -1,12 +1,14 @@
 # Harbour
 
-Run agents across all your repos in an isolated, shareable sandbox.
+Run agents across your repositories in a controlled, shareable environment.
 
-- Share a simple harness (`repos.yaml`, `AGENTS.md`, `skills/`)
-- Run agents in an isolated Colima VM
-- Run across multiple repositories in a single run
-- Keep your existing Docker workflow unchanged
-- Choose your agent (Claude or Codex) at provisioning time
+Like Docker Compose, but for agent harnesses.
+
+- Run agents in a sandbox (Colima VM)
+- Work across multiple repositories by default
+- Define and share your harness (`repos.yaml`, `AGENTS.md`, `skills/`)
+- Keep your existing Docker workflow (via docker context)
+- Supports Claude or Codex
 
 ## Install
 
@@ -39,7 +41,7 @@ harbour help
    Provision prompts for:
 
    - Path to your harness
-   - Workspace root
+   - Workspace root (where you repos live)
    - Agent to provision
    - The default `harbour` command
 
