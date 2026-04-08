@@ -16,7 +16,7 @@ func ensureCommand(name string) error {
 
 func ensureColima() error {
 	if err := ensureCommand("colima"); err != nil {
-		return fmt.Errorf("colima is required for Harbour. Install it with: brew install colima")
+		return fmt.Errorf("colima is required for Harbour. Install it with: brew install colima: %w", err)
 	}
 	return nil
 }
