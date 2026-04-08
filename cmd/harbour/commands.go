@@ -14,12 +14,15 @@ import _ "embed"
 var provisionVMScript string
 
 func runProvision() error {
-	if err := ensureColima(); err != nil {
-		return err
-	}
-
 	cfg, err := loadConfig(true)
 	if err != nil {
+		return err
+	}
+	vm, err := resolveVMBackend(cfg)
+	if err != nil {
+		return err
+	}
+	if err := vm.EnsureInstalled(); err != nil {
 		return err
 	}
 	cfgPath, err := configPath()
@@ -114,16 +117,16 @@ func runProvision() error {
 	case "codex":
 		requestedVersion = cfg.CodexVersion
 		if requestedVersion == "latest" {
-			fmt.Printf("Resolving latest Codex release for Harbour profile %s\n", cfg.ColimaProfile)
+			fmt.Printf("Resolving latest Codex release for Harbour profile %s\n", cfg.VMProfile)
 		} else {
-			fmt.Printf("Installing Codex %s in Harbour profile %s\n", requestedVersion, cfg.ColimaProfile)
+			fmt.Printf("Installing Codex %s in Harbour profile %s\n", requestedVersion, cfg.VMProfile)
 		}
 	case "claude":
 		requestedVersion = cfg.ClaudeCodeVersion
 		if requestedVersion == "latest" {
-			fmt.Printf("Resolving latest Claude Code release for Harbour profile %s\n", cfg.ColimaProfile)
+			fmt.Printf("Resolving latest Claude Code release for Harbour profile %s\n", cfg.VMProfile)
 		} else {
-			fmt.Printf("Installing Claude Code %s in Harbour profile %s\n", requestedVersion, cfg.ColimaProfile)
+			fmt.Printf("Installing Claude Code %s in Harbour profile %s\n", requestedVersion, cfg.VMProfile)
 		}
 	}
 
@@ -132,64 +135,44 @@ func runProvision() error {
 		return err
 	}
 
-	startArgs := []string{
-		"start", cfg.ColimaProfile,
-		"--runtime", cfg.ColimaRuntime,
-		"--vm-type", cfg.ColimaVMType,
-		"--arch", cfg.ColimaArch,
-		"--cpu", fmt.Sprintf("%d", cfg.ColimaCPU),
-		"--memory", fmt.Sprintf("%d", cfg.ColimaMemory),
-		"--disk", fmt.Sprintf("%d", cfg.ColimaDisk),
-		"--mount-type", cfg.ColimaMountType,
-	}
-	if cfg.ColimaForwardSSHAgent {
-		startArgs = append(startArgs, "--ssh-agent")
-	}
-	if cfg.ColimaNetworkAddress {
-		startArgs = append(startArgs, "--network-address")
-	}
-	startArgs = append(startArgs, "--mount", fmt.Sprintf("%s:w", cfg.HarnessPath))
-	for _, host := range repoHosts {
-		startArgs = append(startArgs, "--mount", fmt.Sprintf("%s:w", host))
-	}
+	mounts := []string{cfg.HarnessPath}
+	mounts = append(mounts, repoHosts...)
 
 	desiredMounts := desiredMountLines(cfg.HarnessPath, repoHosts)
-	currentMounts, err := currentMountLines(cfg.ColimaProfile)
+	currentMounts, err := vm.CurrentMountLines(cfg)
 	if err != nil {
 		return err
 	}
 
-	running, err := colimaStatus(cfg.ColimaProfile)
+	running, err := vm.Status(cfg)
 	if err != nil {
 		return err
 	}
 	if running {
 		if !equalStringSlices(desiredMounts, currentMounts) {
-			fmt.Printf("Configured mounts differ from the running Harbour profile %s.\n", cfg.ColimaProfile)
+			fmt.Printf("Configured mounts differ from the running Harbour profile %s.\n", cfg.VMProfile)
 			fmt.Printf("\nMount diff:\n")
 			for _, line := range formatMountDiff(currentMounts, desiredMounts) {
 				fmt.Printf("  %s\n", line)
 			}
-			ok, err := promptYesNo("\nRestart Colima now to apply mount changes? [y/N] ")
+			ok, err := promptYesNo(fmt.Sprintf("\nRestart %s now to apply mount changes? [y/N] ", vm.Name()))
 			if err != nil {
 				return err
 			}
 			if !ok {
-				return fmt.Errorf("aborted without restarting Colima")
+				return fmt.Errorf("aborted without restarting %s", vm.Name())
 			}
-			if err := runCommand("colima", "stop", "-p", cfg.ColimaProfile); err != nil {
+			if err := vm.Stop(cfg); err != nil {
 				return err
 			}
-			fmt.Printf("Executing:\n  colima %s\n", shellQuoteArgs(startArgs))
-			if err := runCommand("colima", startArgs...); err != nil {
+			if err := vm.Start(cfg, mounts); err != nil {
 				return err
 			}
 		} else {
-			fmt.Printf("Harbour profile %s is already running.\n", cfg.ColimaProfile)
+			fmt.Printf("Harbour profile %s is already running.\n", cfg.VMProfile)
 		}
 	} else {
-		fmt.Printf("Executing:\n  colima %s\n", shellQuoteArgs(startArgs))
-		if err := runCommand("colima", startArgs...); err != nil {
+		if err := vm.Start(cfg, mounts); err != nil {
 			return err
 		}
 	}
@@ -207,8 +190,7 @@ func runProvision() error {
 
 	hostUID := fmt.Sprintf("%d", os.Getuid())
 	hostGID := fmt.Sprintf("%d", os.Getgid())
-	sshArgs := []string{
-		"ssh", "-p", cfg.ColimaProfile, "--", "/usr/bin/bash", "-s", "--",
+	scriptArgs := []string{
 		selectedAgent,
 		requestedVersion,
 		agentsPath,
@@ -222,7 +204,7 @@ func runProvision() error {
 	if err := os.Chdir(cfg.WorkspaceRoot); err != nil {
 		return err
 	}
-	if err := runCommandInput(provisionVMScript, "colima", sshArgs...); err != nil {
+	if err := vm.RunRemoteScript(cfg, provisionVMScript, scriptArgs); err != nil {
 		return err
 	}
 
@@ -249,19 +231,23 @@ func runShell() error {
 	if err != nil {
 		return err
 	}
-	running, err := colimaStatus(cfg.ColimaProfile)
+	vm, err := resolveVMBackend(cfg)
+	if err != nil {
+		return err
+	}
+	running, err := vm.Status(cfg)
 	if err != nil {
 		return err
 	}
 	if !running {
-		return fmt.Errorf("Harbour profile %s is not running. Start it with harbour provision", cfg.ColimaProfile)
+		return fmt.Errorf("Harbour profile %s is not running. Start it with harbour provision", cfg.VMProfile)
 	}
-	fmt.Printf("Opening shell in Harbour profile %s\n", cfg.ColimaProfile)
+	fmt.Printf("Opening shell in Harbour profile %s\n", cfg.VMProfile)
 	if err := os.Chdir(cfg.WorkspaceRoot); err != nil {
 		return err
 	}
 	command := fmt.Sprintf("cd %q && exec /usr/bin/bash -l", cfg.WorkspaceRoot)
-	return runCommand("colima", "ssh", "-p", cfg.ColimaProfile, "--", "/usr/bin/bash", "-lc", command)
+	return vm.RunRemoteCommand(cfg, command)
 }
 
 func runAgent(yolo bool) error {
@@ -269,12 +255,16 @@ func runAgent(yolo bool) error {
 	if err != nil {
 		return err
 	}
-	running, err := colimaStatus(cfg.ColimaProfile)
+	vm, err := resolveVMBackend(cfg)
+	if err != nil {
+		return err
+	}
+	running, err := vm.Status(cfg)
 	if err != nil {
 		return err
 	}
 	if !running {
-		return fmt.Errorf("Harbour profile %s is not running. Start it with harbour provision", cfg.ColimaProfile)
+		return fmt.Errorf("Harbour profile %s is not running. Start it with harbour provision", cfg.VMProfile)
 	}
 
 	agentName := ""
@@ -293,13 +283,13 @@ func runAgent(yolo bool) error {
 		return fmt.Errorf("unsupported active_agent=%s in %s. Run harbour provision and choose codex or claude", cfg.ActiveAgent, configPath)
 	}
 
-	fmt.Printf("Launching %s in Harbour profile %s\n", agentName, cfg.ColimaProfile)
+	fmt.Printf("Launching %s in Harbour profile %s\n", agentName, cfg.VMProfile)
 	if err := os.Chdir(cfg.WorkspaceRoot); err != nil {
 		return err
 	}
 
 	remoteScript := buildAgentRemoteScript(cfg, yolo, agentCommand, instructionFile)
-	return runCommand("colima", "ssh", "-p", cfg.ColimaProfile, "--", "/usr/bin/bash", "-lc", remoteScript)
+	return vm.RunRemoteCommand(cfg, remoteScript)
 }
 
 func requireProvisionedConfig(requireHarness bool) (Config, string, error) {
@@ -311,8 +301,8 @@ func requireProvisionedConfig(requireHarness bool) (Config, string, error) {
 	if err != nil {
 		return Config{}, "", err
 	}
-	if cfg.ColimaProfile == "" {
-		return Config{}, "", fmt.Errorf("colima_profile is not set in %s. Run harbour provision", cfgPath)
+	if cfg.VMProfile == "" {
+		return Config{}, "", fmt.Errorf("vm_profile is not set in %s. Run harbour provision", cfgPath)
 	}
 	if cfg.WorkspaceRoot == "" {
 		return Config{}, "", fmt.Errorf("workspace_root is not set in %s. Run harbour provision", cfgPath)
@@ -345,7 +335,7 @@ fi
 
 if [[ ! -d "${workspace_root}" ]]; then
   echo "${workspace_root} is not visible in the VM." >&2
-  echo "Check the current mount layout, stop the Colima profile, and run harbour provision again." >&2
+  echo "Check the current mount layout, stop the Harbour VM, and run harbour provision again." >&2
   exit 127
 fi
 
@@ -357,7 +347,7 @@ fi
 
 if [[ ! -d "${harbour_harness_dir}" ]]; then
   echo "harbour-harness is not mounted in the VM at ${harbour_harness_dir}." >&2
-  echo "Check the sibling harbour-harness repo, stop the Colima profile, and run harbour provision again." >&2
+  echo "Check the sibling harbour-harness repo, stop the Harbour VM, and run harbour provision again." >&2
   exit 127
 fi
 

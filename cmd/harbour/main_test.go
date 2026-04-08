@@ -159,7 +159,7 @@ func TestSaveConfigRoundTrip(t *testing.T) {
 	cfg.WorkspaceRoot = "/tmp/workspace"
 	cfg.ActiveAgent = "claude"
 	cfg.DefaultCommand = "shell"
-	cfg.ColimaCPU = 8
+	cfg.VMCPU = 8
 
 	if err := saveConfig(cfg); err != nil {
 		t.Fatalf("saveConfig() returned error: %v", err)

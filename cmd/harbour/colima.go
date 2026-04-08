@@ -9,11 +9,64 @@ import (
 	"strings"
 )
 
-func colimaStatus(profile string) (bool, error) {
-	return commandSucceeded("colima", "status", "-p", profile)
+type colimaVMBackend struct{}
+
+func (colimaVMBackend) Name() string {
+	return "Colima"
 }
 
-func currentMountLines(profile string) ([]string, error) {
+func (colimaVMBackend) EnsureInstalled() error {
+	return ensureColima()
+}
+
+func (colimaVMBackend) Status(cfg Config) (bool, error) {
+	return commandSucceeded("colima", "status", "-p", cfg.VMProfile)
+}
+
+func (colimaVMBackend) CurrentMountLines(cfg Config) ([]string, error) {
+	return currentColimaMountLines(cfg.VMProfile)
+}
+
+func (colimaVMBackend) Start(cfg Config, mounts []string) error {
+	args := []string{
+		"start", cfg.VMProfile,
+		"--runtime", cfg.VMRuntime,
+		"--vm-type", cfg.VMType,
+		"--arch", cfg.VMArch,
+		"--cpu", fmt.Sprintf("%d", cfg.VMCPU),
+		"--memory", fmt.Sprintf("%d", cfg.VMMemory),
+		"--disk", fmt.Sprintf("%d", cfg.VMDisk),
+		"--mount-type", cfg.VMMountType,
+	}
+	if cfg.VMForwardSSHAgent {
+		args = append(args, "--ssh-agent")
+	}
+	if cfg.VMNetworkAddress {
+		args = append(args, "--network-address")
+	}
+	for _, mount := range mounts {
+		args = append(args, "--mount", fmt.Sprintf("%s:w", mount))
+	}
+	fmt.Printf("Executing:\n  colima %s\n", shellQuoteArgs(args))
+	return runCommand("colima", args...)
+}
+
+func (colimaVMBackend) Stop(cfg Config) error {
+	return runCommand("colima", "stop", "-p", cfg.VMProfile)
+}
+
+func (colimaVMBackend) RunRemoteCommand(cfg Config, command string) error {
+	return runCommand("colima", "ssh", "-p", cfg.VMProfile, "--", "/usr/bin/bash", "-lc", command)
+}
+
+func (colimaVMBackend) RunRemoteScript(cfg Config, script string, args []string) error {
+	sshArgs := append([]string{
+		"ssh", "-p", cfg.VMProfile, "--", "/usr/bin/bash", "-s", "--",
+	}, args...)
+	return runCommandInput(script, "colima", sshArgs...)
+}
+
+func currentColimaMountLines(profile string) ([]string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
