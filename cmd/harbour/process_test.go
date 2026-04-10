@@ -7,10 +7,10 @@ import (
 	"github.com/agent-harbour/harbour/cmd/harbour/vm"
 )
 
-func TestColimaBackendEnsureInstalledReturnsInstallGuidance(t *testing.T) {
+func TestColimaEnsureInstalledReturnsInstallGuidance(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 
-	err := vm.ColimaBackend{}.EnsureInstalled()
+	err := vm.Colima{}.EnsureInstalled()
 	if err == nil {
 		t.Fatal("EnsureInstalled() returned nil error")
 	}

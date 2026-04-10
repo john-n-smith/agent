@@ -30,7 +30,7 @@ type Backend interface {
 func Resolve(cfg Config) (Backend, error) {
 	switch cfg.Backend {
 	case "colima":
-		return ColimaBackend{cfg: cfg}, nil
+		return Colima{cfg: cfg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported vm_backend=%s", cfg.Backend)
 	}

@@ -10,33 +10,33 @@ import (
 	"strings"
 )
 
-type ColimaBackend struct {
+type Colima struct {
 	cfg Config
 }
 
-var _ Backend = ColimaBackend{}
+var _ Backend = Colima{}
 
-func (ColimaBackend) Name() string {
+func (Colima) Name() string {
 	return "Colima"
 }
 
-func (ColimaBackend) EnsureInstalled() error {
+func (Colima) EnsureInstalled() error {
 	if err := ensureCommand("colima"); err != nil {
 		return fmt.Errorf("colima is required for Harbour. Install it with: brew install colima: %w", err)
 	}
 	return nil
 }
 
-func (b ColimaBackend) Status() (bool, error) {
-	return commandSucceeded("colima", "status", "-p", b.cfg.Profile)
+func (c Colima) Status() (bool, error) {
+	return commandSucceeded("colima", "status", "-p", c.cfg.Profile)
 }
 
-func (b ColimaBackend) CurrentMountLines() ([]string, error) {
+func (c Colima) CurrentMountLines() ([]string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
-	profileConfig := filepath.Join(home, ".colima", b.cfg.Profile, "colima.yaml")
+	profileConfig := filepath.Join(home, ".colima", c.cfg.Profile, "colima.yaml")
 	file, err := os.Open(profileConfig)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -81,21 +81,21 @@ func (b ColimaBackend) CurrentMountLines() ([]string, error) {
 	return normalizeMountLines(mounts), nil
 }
 
-func (b ColimaBackend) Start(mounts []string) error {
+func (c Colima) Start(mounts []string) error {
 	args := []string{
-		"start", b.cfg.Profile,
-		"--runtime", b.cfg.Runtime,
-		"--vm-type", b.cfg.Type,
-		"--arch", b.cfg.Arch,
-		"--cpu", fmt.Sprintf("%d", b.cfg.CPU),
-		"--memory", fmt.Sprintf("%d", b.cfg.Memory),
-		"--disk", fmt.Sprintf("%d", b.cfg.Disk),
-		"--mount-type", b.cfg.MountType,
+		"start", c.cfg.Profile,
+		"--runtime", c.cfg.Runtime,
+		"--vm-type", c.cfg.Type,
+		"--arch", c.cfg.Arch,
+		"--cpu", fmt.Sprintf("%d", c.cfg.CPU),
+		"--memory", fmt.Sprintf("%d", c.cfg.Memory),
+		"--disk", fmt.Sprintf("%d", c.cfg.Disk),
+		"--mount-type", c.cfg.MountType,
 	}
-	if b.cfg.ForwardSSHAgent {
+	if c.cfg.ForwardSSHAgent {
 		args = append(args, "--ssh-agent")
 	}
-	if b.cfg.NetworkAddress {
+	if c.cfg.NetworkAddress {
 		args = append(args, "--network-address")
 	}
 	for _, mount := range mounts {
@@ -105,17 +105,17 @@ func (b ColimaBackend) Start(mounts []string) error {
 	return runCommand("colima", args...)
 }
 
-func (b ColimaBackend) Stop() error {
-	return runCommand("colima", "stop", "-p", b.cfg.Profile)
+func (c Colima) Stop() error {
+	return runCommand("colima", "stop", "-p", c.cfg.Profile)
 }
 
-func (b ColimaBackend) RunRemoteCommand(command string) error {
-	return runCommand("colima", "ssh", "-p", b.cfg.Profile, "--", "/usr/bin/bash", "-lc", command)
+func (c Colima) RunRemoteCommand(command string) error {
+	return runCommand("colima", "ssh", "-p", c.cfg.Profile, "--", "/usr/bin/bash", "-lc", command)
 }
 
-func (b ColimaBackend) RunRemoteScript(script string, args []string) error {
+func (c Colima) RunRemoteScript(script string, args []string) error {
 	sshArgs := append([]string{
-		"ssh", "-p", b.cfg.Profile, "--", "/usr/bin/bash", "-s", "--",
+		"ssh", "-p", c.cfg.Profile, "--", "/usr/bin/bash", "-s", "--",
 	}, args...)
 	return runCommandInput(script, "colima", sshArgs...)
 }
