@@ -140,14 +140,12 @@ func runProvision() error {
 	mounts = append(mounts, repoHosts...)
 
 	desiredMounts := desiredMountLines(cfg.HarnessPath, repoHosts)
-	vmCfg := cfg.vmConfig()
-
-	currentMounts, err := vmBackend.CurrentMountLines(vmCfg)
+	currentMounts, err := vmBackend.CurrentMountLines()
 	if err != nil {
 		return err
 	}
 
-	running, err := vmBackend.Status(vmCfg)
+	running, err := vmBackend.Status()
 	if err != nil {
 		return err
 	}
@@ -165,17 +163,17 @@ func runProvision() error {
 			if !ok {
 				return fmt.Errorf("aborted without restarting %s", vmBackend.Name())
 			}
-			if err := vmBackend.Stop(vmCfg); err != nil {
+			if err := vmBackend.Stop(); err != nil {
 				return err
 			}
-			if err := vmBackend.Start(vmCfg, mounts); err != nil {
+			if err := vmBackend.Start(mounts); err != nil {
 				return err
 			}
 		} else {
 			fmt.Printf("Harbour profile %s is already running.\n", cfg.VMProfile)
 		}
 	} else {
-		if err := vmBackend.Start(vmCfg, mounts); err != nil {
+		if err := vmBackend.Start(mounts); err != nil {
 			return err
 		}
 	}
@@ -207,7 +205,7 @@ func runProvision() error {
 	if err := os.Chdir(cfg.WorkspaceRoot); err != nil {
 		return err
 	}
-	if err := vmBackend.RunRemoteScript(vmCfg, provisionVMScript, scriptArgs); err != nil {
+	if err := vmBackend.RunRemoteScript(provisionVMScript, scriptArgs); err != nil {
 		return err
 	}
 
@@ -238,8 +236,7 @@ func runShell() error {
 	if err != nil {
 		return err
 	}
-	vmCfg := cfg.vmConfig()
-	running, err := vmBackend.Status(vmCfg)
+	running, err := vmBackend.Status()
 	if err != nil {
 		return err
 	}
@@ -251,7 +248,7 @@ func runShell() error {
 		return err
 	}
 	command := fmt.Sprintf("cd %q && exec /usr/bin/bash -l", cfg.WorkspaceRoot)
-	return vmBackend.RunRemoteCommand(vmCfg, command)
+	return vmBackend.RunRemoteCommand(command)
 }
 
 func runAgent(yolo bool) error {
@@ -263,8 +260,7 @@ func runAgent(yolo bool) error {
 	if err != nil {
 		return err
 	}
-	vmCfg := cfg.vmConfig()
-	running, err := vmBackend.Status(vmCfg)
+	running, err := vmBackend.Status()
 	if err != nil {
 		return err
 	}
@@ -294,7 +290,7 @@ func runAgent(yolo bool) error {
 	}
 
 	remoteScript := buildAgentRemoteScript(cfg, yolo, agentCommand, instructionFile)
-	return vmBackend.RunRemoteCommand(vmCfg, remoteScript)
+	return vmBackend.RunRemoteCommand(remoteScript)
 }
 
 func requireProvisionedConfig(requireHarness bool) (Config, string, error) {
