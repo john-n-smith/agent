@@ -10,7 +10,9 @@ import (
 	"strings"
 )
 
-type ColimaBackend struct{}
+type ColimaBackend struct {
+	cfg Config
+}
 
 var _ Backend = ColimaBackend{}
 
@@ -25,16 +27,16 @@ func (ColimaBackend) EnsureInstalled() error {
 	return nil
 }
 
-func (ColimaBackend) Status(cfg Config) (bool, error) {
-	return commandSucceeded("colima", "status", "-p", cfg.Profile)
+func (b ColimaBackend) Status() (bool, error) {
+	return commandSucceeded("colima", "status", "-p", b.cfg.Profile)
 }
 
-func (ColimaBackend) CurrentMountLines(cfg Config) ([]string, error) {
+func (b ColimaBackend) CurrentMountLines() ([]string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
-	profileConfig := filepath.Join(home, ".colima", cfg.Profile, "colima.yaml")
+	profileConfig := filepath.Join(home, ".colima", b.cfg.Profile, "colima.yaml")
 	file, err := os.Open(profileConfig)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -79,21 +81,21 @@ func (ColimaBackend) CurrentMountLines(cfg Config) ([]string, error) {
 	return normalizeMountLines(mounts), nil
 }
 
-func (ColimaBackend) Start(cfg Config, mounts []string) error {
+func (b ColimaBackend) Start(mounts []string) error {
 	args := []string{
-		"start", cfg.Profile,
-		"--runtime", cfg.Runtime,
-		"--vm-type", cfg.Type,
-		"--arch", cfg.Arch,
-		"--cpu", fmt.Sprintf("%d", cfg.CPU),
-		"--memory", fmt.Sprintf("%d", cfg.Memory),
-		"--disk", fmt.Sprintf("%d", cfg.Disk),
-		"--mount-type", cfg.MountType,
+		"start", b.cfg.Profile,
+		"--runtime", b.cfg.Runtime,
+		"--vm-type", b.cfg.Type,
+		"--arch", b.cfg.Arch,
+		"--cpu", fmt.Sprintf("%d", b.cfg.CPU),
+		"--memory", fmt.Sprintf("%d", b.cfg.Memory),
+		"--disk", fmt.Sprintf("%d", b.cfg.Disk),
+		"--mount-type", b.cfg.MountType,
 	}
-	if cfg.ForwardSSHAgent {
+	if b.cfg.ForwardSSHAgent {
 		args = append(args, "--ssh-agent")
 	}
-	if cfg.NetworkAddress {
+	if b.cfg.NetworkAddress {
 		args = append(args, "--network-address")
 	}
 	for _, mount := range mounts {
@@ -103,17 +105,17 @@ func (ColimaBackend) Start(cfg Config, mounts []string) error {
 	return runCommand("colima", args...)
 }
 
-func (ColimaBackend) Stop(cfg Config) error {
-	return runCommand("colima", "stop", "-p", cfg.Profile)
+func (b ColimaBackend) Stop() error {
+	return runCommand("colima", "stop", "-p", b.cfg.Profile)
 }
 
-func (ColimaBackend) RunRemoteCommand(cfg Config, command string) error {
-	return runCommand("colima", "ssh", "-p", cfg.Profile, "--", "/usr/bin/bash", "-lc", command)
+func (b ColimaBackend) RunRemoteCommand(command string) error {
+	return runCommand("colima", "ssh", "-p", b.cfg.Profile, "--", "/usr/bin/bash", "-lc", command)
 }
 
-func (ColimaBackend) RunRemoteScript(cfg Config, script string, args []string) error {
+func (b ColimaBackend) RunRemoteScript(script string, args []string) error {
 	sshArgs := append([]string{
-		"ssh", "-p", cfg.Profile, "--", "/usr/bin/bash", "-s", "--",
+		"ssh", "-p", b.cfg.Profile, "--", "/usr/bin/bash", "-s", "--",
 	}, args...)
 	return runCommandInput(script, "colima", sshArgs...)
 }

@@ -19,18 +19,18 @@ type Config struct {
 type Backend interface {
 	Name() string
 	EnsureInstalled() error
-	Status(cfg Config) (bool, error)
-	CurrentMountLines(cfg Config) ([]string, error)
-	Start(cfg Config, mounts []string) error
-	Stop(cfg Config) error
-	RunRemoteCommand(cfg Config, command string) error
-	RunRemoteScript(cfg Config, script string, args []string) error
+	Status() (bool, error)
+	CurrentMountLines() ([]string, error)
+	Start(mounts []string) error
+	Stop() error
+	RunRemoteCommand(command string) error
+	RunRemoteScript(script string, args []string) error
 }
 
 func Resolve(cfg Config) (Backend, error) {
 	switch cfg.Backend {
 	case "colima":
-		return ColimaBackend{}, nil
+		return ColimaBackend{cfg: cfg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported vm_backend=%s", cfg.Backend)
 	}
