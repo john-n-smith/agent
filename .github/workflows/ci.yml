@@ -6,6 +6,9 @@ on:
       - master
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   unit-test:
     name: Test: unit tests
@@ -13,10 +16,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d26d11144984da472c8869e559144a603 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -40,10 +43,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d26d11144984da472c8869e559144a603 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -54,12 +57,16 @@ jobs:
         run: brew install colima docker qemu
 
       - name: Build Harbour
-        run: go build -o bin/harbour ./cmd/harbour
+        run: |
+          mkdir -p bin
+          go build -o bin/harbour ./cmd/harbour
 
       - name: Set up harness template
         run: |
           harness_path="${RUNNER_TEMP}/harbour-harness"
-          git clone --depth 1 https://github.com/agent-harbour/harbour-harness-template.git "${harness_path}"
+          harness_ref="265cd943503346368d1e99a047f27520f43c8009"
+          git clone https://github.com/agent-harbour/harbour-harness-template.git "${harness_path}"
+          git -C "${harness_path}" checkout "${harness_ref}"
           cat > "${harness_path}/repos.yaml" <<'EOF'
           repos:
             - host_path: harbour
