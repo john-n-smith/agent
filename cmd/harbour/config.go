@@ -32,25 +32,6 @@ type Config struct {
 	DefaultCommand    string `json:"default_command"`
 }
 
-type legacyConfig struct {
-	ColimaProfile         string `json:"colima_profile"`
-	ColimaRuntime         string `json:"colima_runtime"`
-	ColimaVMType          string `json:"colima_vm_type"`
-	ColimaArch            string `json:"colima_arch"`
-	ColimaCPU             int    `json:"colima_cpu"`
-	ColimaMemory          int    `json:"colima_memory"`
-	ColimaDisk            int    `json:"colima_disk"`
-	ColimaMountType       string `json:"colima_mount_type"`
-	ColimaForwardSSHAgent bool   `json:"colima_forward_ssh_agent"`
-	ColimaNetworkAddress  bool   `json:"colima_network_address"`
-	CodexVersion          string `json:"codex_version"`
-	ClaudeCodeVersion     string `json:"claude_code_version"`
-	HarnessPath           string `json:"harness_path"`
-	WorkspaceRoot         string `json:"workspace_root"`
-	ActiveAgent           string `json:"active_agent"`
-	DefaultCommand        string `json:"default_command"`
-}
-
 func defaultConfig() Config {
 	cfg := Config{
 		VMBackend:         "colima",
@@ -131,66 +112,10 @@ func loadConfig(create bool) (Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, fmt.Errorf("invalid Harbour config %s: %w", path, err)
 	}
-	configErr := validateConfig(cfg)
-	if configErr == nil {
-		return cfg, nil
-	}
-
-	// If the file is not a valid vm_* config, try the legacy colima_* schema once and rewrite it.
-	var legacy legacyConfig
-	if err := json.Unmarshal(data, &legacy); err != nil {
+	if err := validateConfig(cfg); err != nil {
 		return Config{}, fmt.Errorf("invalid Harbour config %s: %w", path, err)
 	}
-	if !legacy.hasLegacyVMFields() {
-		return Config{}, fmt.Errorf("invalid Harbour config %s: %w; no legacy colima_* fields found", path, configErr)
-	}
-	ok, err := promptYesNo("Migrate legacy Harbour config from colima_* keys to vm_* keys? [y/N] ")
-	if err != nil {
-		return Config{}, err
-	}
-	if !ok {
-		return Config{}, fmt.Errorf("aborted without migrating legacy Harbour config")
-	}
-	migrated := legacy.toConfig()
-	if err := validateConfig(migrated); err != nil {
-		return Config{}, fmt.Errorf("invalid Harbour config %s: %w", path, err)
-	}
-	if err := saveConfig(migrated); err != nil {
-		return Config{}, err
-	}
-	return migrated, nil
-}
-
-func (legacy legacyConfig) toConfig() Config {
-	cfg := defaultConfig()
-	cfg.VMProfile = legacy.ColimaProfile
-	cfg.VMRuntime = legacy.ColimaRuntime
-	cfg.VMType = legacy.ColimaVMType
-	cfg.VMArch = legacy.ColimaArch
-	cfg.VMCPU = legacy.ColimaCPU
-	cfg.VMMemory = legacy.ColimaMemory
-	cfg.VMDisk = legacy.ColimaDisk
-	cfg.VMMountType = legacy.ColimaMountType
-	cfg.VMForwardSSHAgent = legacy.ColimaForwardSSHAgent
-	cfg.VMNetworkAddress = legacy.ColimaNetworkAddress
-	cfg.CodexVersion = legacy.CodexVersion
-	cfg.ClaudeCodeVersion = legacy.ClaudeCodeVersion
-	cfg.HarnessPath = legacy.HarnessPath
-	cfg.WorkspaceRoot = legacy.WorkspaceRoot
-	cfg.ActiveAgent = legacy.ActiveAgent
-	cfg.DefaultCommand = legacy.DefaultCommand
-	return cfg
-}
-
-func (legacy legacyConfig) hasLegacyVMFields() bool {
-	return legacy.ColimaProfile != "" ||
-		legacy.ColimaRuntime != "" ||
-		legacy.ColimaVMType != "" ||
-		legacy.ColimaArch != "" ||
-		legacy.ColimaCPU > 0 ||
-		legacy.ColimaMemory > 0 ||
-		legacy.ColimaDisk > 0 ||
-		legacy.ColimaMountType != ""
+	return cfg, nil
 }
 
 func saveConfig(cfg Config) error {
