@@ -67,12 +67,12 @@ jobs:
         run: |
           harness_path="${RUNNER_TEMP}/harbour-harness"
           workspace_root="$(dirname "$GITHUB_WORKSPACE")"
-          ./bin/harbour provision <<EOF
-          ${harness_path}
-          ${workspace_root}
-          ${{ matrix.agent }}
-
-          EOF
+          {
+            printf '%s\n' "${harness_path}"
+            printf '%s\n' "${workspace_root}"
+            printf '%s\n' "${{ matrix.agent }}"
+            printf '\n'
+          } | ./bin/harbour provision
 
       - name: Verify provision result
         run: |
@@ -83,9 +83,11 @@ jobs:
           case "${{ matrix.agent }}" in
             codex)
               test -L "${workspace_root}/AGENTS.md"
+              colima ssh -p harbour -- /usr/bin/env bash -lc 'command -v codex'
               ;;
             claude)
               test -L "${workspace_root}/CLAUDE.md"
+              colima ssh -p harbour -- /usr/bin/env bash -lc 'command -v claude'
               ;;
           esac
 
