@@ -5,8 +5,8 @@ on:
   pull_request:
 
 jobs:
-  test:
-    name: Test
+  unit-test:
+    name: Unit Test
     runs-on: ubuntu-latest
 
     steps:
@@ -21,3 +21,76 @@ jobs:
 
       - name: Run tests
         run: make test
+
+  provision:
+    name: Provision (macOS Intel, ${{ matrix.agent }})
+    # GitHub-hosted Apple Silicon runners exist, but hosted Colima coverage is
+    # not reliable there yet because nested virtualisation support is still a blocker.
+    # Add Apple Silicon macOS coverage when that runner path is viable.
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - claude
+          - codex
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Colima dependencies
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: brew install colima docker qemu
+
+      - name: Build Harbour
+        run: go build -o bin/harbour ./cmd/harbour
+
+      - name: Check out harness template
+        run: |
+          harness_path="${RUNNER_TEMP}/harbour-harness"
+          git clone --depth 1 https://github.com/agent-harbour/harbour-harness-template.git "${harness_path}"
+          cat > "${harness_path}/repos.yaml" <<'EOF'
+          repos:
+            - host_path: harbour
+          EOF
+
+      - name: Run provision
+        run: |
+          harness_path="${RUNNER_TEMP}/harbour-harness"
+          workspace_root="$(dirname "$GITHUB_WORKSPACE")"
+          ./bin/harbour provision <<EOF
+          ${harness_path}
+          ${workspace_root}
+          ${{ matrix.agent }}
+
+          EOF
+
+      - name: Verify provision result
+        run: |
+          workspace_root="$(dirname "$GITHUB_WORKSPACE")"
+          config_path="${HOME}/Library/Application Support/harbour/config.json"
+          colima status -p harbour
+          grep -F "\"active_agent\": \"${{ matrix.agent }}\"" "${config_path}"
+          case "${{ matrix.agent }}" in
+            codex)
+              test -L "${workspace_root}/AGENTS.md"
+              ;;
+            claude)
+              test -L "${workspace_root}/CLAUDE.md"
+              ;;
+          esac
+
+      - name: Clean up Colima profile
+        if: always()
+        run: |
+          colima stop -p harbour || true
+          colima delete -f -p harbour || true
