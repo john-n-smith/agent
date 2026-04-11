@@ -20,7 +20,8 @@ brew install agent-harbour/harbour/harbour
 harbour help
 ```
 
-Harbour provisions and runs an isolated Colima VM on the host. Homebrew installs Colima automatically.
+Harbour provisions and runs an isolated Colima VM on the host.
+Homebrew installs Colima automatically for the formula.
 
 ## Quick Start
 
@@ -40,12 +41,14 @@ Harbour provisions and runs an isolated Colima VM on the host. Homebrew installs
    harbour provision
    ```
 
+   If you are not using Homebrew, install `colima` before provisioning.
+
    The first run creates Harbour's local config automatically.
 
    Provision prompts for:
 
    - Path to your harness
-   - Workspace root (where you repos live)
+   - Workspace root (where your repos live)
    - Agent to provision
    - The default `harbour` command
 
@@ -80,16 +83,17 @@ Harbour stores its config as a single JSON file.
 
 ```json
 {
-  "colima_profile": "harbour",
-  "colima_runtime": "docker",
-  "colima_vm_type": "vz",
-  "colima_arch": "aarch64",
-  "colima_cpu": 4,
-  "colima_memory": 8,
-  "colima_disk": 100,
-  "colima_mount_type": "virtiofs",
-  "colima_forward_ssh_agent": true,
-  "colima_network_address": false,
+  "vm_backend": "colima",
+  "vm_profile": "harbour",
+  "vm_runtime": "docker",
+  "vm_type": "vz",
+  "vm_arch": "aarch64",
+  "vm_cpu": 4,
+  "vm_memory": 8,
+  "vm_disk": 100,
+  "vm_mount_type": "virtiofs",
+  "vm_forward_ssh_agent": true,
+  "vm_network_address": false,
   "codex_version": "latest",
   "claude_code_version": "latest",
   "harness_path": "",

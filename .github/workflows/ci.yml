@@ -28,6 +28,12 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Check formatting
+        run: make fmt-check
+
+      - name: Run vet
+        run: make vet
+
       - name: Run tests
         run: make test
 
@@ -82,16 +88,17 @@ jobs:
           mkdir -p "${config_dir}"
           cat > "${config_dir}/config.json" <<'EOF'
           {
-            "colima_profile": "harbour",
-            "colima_runtime": "docker",
-            "colima_vm_type": "qemu",
-            "colima_arch": "x86_64",
-            "colima_cpu": 2,
-            "colima_memory": 4,
-            "colima_disk": 20,
-            "colima_mount_type": "sshfs",
-            "colima_forward_ssh_agent": false,
-            "colima_network_address": false,
+            "vm_backend": "colima",
+            "vm_profile": "harbour",
+            "vm_runtime": "docker",
+            "vm_type": "qemu",
+            "vm_arch": "x86_64",
+            "vm_cpu": 2,
+            "vm_memory": 4,
+            "vm_disk": 20,
+            "vm_mount_type": "sshfs",
+            "vm_forward_ssh_agent": false,
+            "vm_network_address": false,
             "codex_version": "latest",
             "claude_code_version": "latest",
             "harness_path": "",

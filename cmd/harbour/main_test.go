@@ -189,20 +189,20 @@ func TestApplyPlatformDefaults(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
-			cfg.ColimaVMType = "vz"
-			cfg.ColimaArch = "aarch64"
-			cfg.ColimaMountType = "virtiofs"
+			cfg.VMType = "vz"
+			cfg.VMArch = "aarch64"
+			cfg.VMMountType = "virtiofs"
 
 			applyPlatformDefaults(&cfg, tt.goos, tt.goarch)
 
-			if cfg.ColimaVMType != tt.wantVM {
-				t.Fatalf("applyPlatformDefaults().ColimaVMType = %q, want %q", cfg.ColimaVMType, tt.wantVM)
+			if cfg.VMType != tt.wantVM {
+				t.Fatalf("applyPlatformDefaults().VMType = %q, want %q", cfg.VMType, tt.wantVM)
 			}
-			if cfg.ColimaArch != tt.wantArch {
-				t.Fatalf("applyPlatformDefaults().ColimaArch = %q, want %q", cfg.ColimaArch, tt.wantArch)
+			if cfg.VMArch != tt.wantArch {
+				t.Fatalf("applyPlatformDefaults().VMArch = %q, want %q", cfg.VMArch, tt.wantArch)
 			}
-			if cfg.ColimaMountType != tt.wantMount {
-				t.Fatalf("applyPlatformDefaults().ColimaMountType = %q, want %q", cfg.ColimaMountType, tt.wantMount)
+			if cfg.VMMountType != tt.wantMount {
+				t.Fatalf("applyPlatformDefaults().VMMountType = %q, want %q", cfg.VMMountType, tt.wantMount)
 			}
 		})
 	}
@@ -216,7 +216,7 @@ func TestSaveConfigRoundTrip(t *testing.T) {
 	cfg.WorkspaceRoot = "/tmp/workspace"
 	cfg.ActiveAgent = "claude"
 	cfg.DefaultCommand = "shell"
-	cfg.ColimaCPU = 8
+	cfg.VMCPU = 8
 
 	if err := saveConfig(cfg); err != nil {
 		t.Fatalf("saveConfig() returned error: %v", err)
@@ -243,6 +243,21 @@ func TestSaveConfigRejectsInvalidValues(t *testing.T) {
 		t.Fatal("saveConfig() returned nil error for invalid config")
 	}
 	if !strings.Contains(err.Error(), "active_agent must be codex, claude, or empty") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSaveConfigRejectsEmptyVMProfile(t *testing.T) {
+	withTestConfigDir(t)
+
+	cfg := defaultConfig()
+	cfg.VMProfile = ""
+
+	err := saveConfig(cfg)
+	if err == nil {
+		t.Fatal("saveConfig() returned nil error for invalid config")
+	}
+	if !strings.Contains(err.Error(), "vm_profile must not be empty") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

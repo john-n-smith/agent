@@ -6,47 +6,51 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/agent-harbour/harbour/cmd/harbour/vm"
 )
 
 var userConfigDir = os.UserConfigDir
 
 type Config struct {
-	ColimaProfile         string `json:"colima_profile"`
-	ColimaRuntime         string `json:"colima_runtime"`
-	ColimaVMType          string `json:"colima_vm_type"`
-	ColimaArch            string `json:"colima_arch"`
-	ColimaCPU             int    `json:"colima_cpu"`
-	ColimaMemory          int    `json:"colima_memory"`
-	ColimaDisk            int    `json:"colima_disk"`
-	ColimaMountType       string `json:"colima_mount_type"`
-	ColimaForwardSSHAgent bool   `json:"colima_forward_ssh_agent"`
-	ColimaNetworkAddress  bool   `json:"colima_network_address"`
-	CodexVersion          string `json:"codex_version"`
-	ClaudeCodeVersion     string `json:"claude_code_version"`
-	HarnessPath           string `json:"harness_path"`
-	WorkspaceRoot         string `json:"workspace_root"`
-	ActiveAgent           string `json:"active_agent"`
-	DefaultCommand        string `json:"default_command"`
+	VMBackend         string `json:"vm_backend"`
+	VMProfile         string `json:"vm_profile"`
+	VMRuntime         string `json:"vm_runtime"`
+	VMType            string `json:"vm_type"`
+	VMArch            string `json:"vm_arch"`
+	VMCPU             int    `json:"vm_cpu"`
+	VMMemory          int    `json:"vm_memory"`
+	VMDisk            int    `json:"vm_disk"`
+	VMMountType       string `json:"vm_mount_type"`
+	VMForwardSSHAgent bool   `json:"vm_forward_ssh_agent"`
+	VMNetworkAddress  bool   `json:"vm_network_address"`
+	CodexVersion      string `json:"codex_version"`
+	ClaudeCodeVersion string `json:"claude_code_version"`
+	HarnessPath       string `json:"harness_path"`
+	WorkspaceRoot     string `json:"workspace_root"`
+	ActiveAgent       string `json:"active_agent"`
+	DefaultCommand    string `json:"default_command"`
 }
 
 func defaultConfig() Config {
 	cfg := Config{
-		ColimaProfile:         "harbour",
-		ColimaRuntime:         "docker",
-		ColimaVMType:          "vz",
-		ColimaArch:            "aarch64",
-		ColimaCPU:             4,
-		ColimaMemory:          8,
-		ColimaDisk:            100,
-		ColimaMountType:       "virtiofs",
-		ColimaForwardSSHAgent: true,
-		ColimaNetworkAddress:  false,
-		CodexVersion:          "latest",
-		ClaudeCodeVersion:     "latest",
-		HarnessPath:           "",
-		WorkspaceRoot:         "",
-		ActiveAgent:           "",
-		DefaultCommand:        "agent",
+		VMBackend:         "colima",
+		VMProfile:         "harbour",
+		VMRuntime:         "docker",
+		VMType:            "vz",
+		VMArch:            "aarch64",
+		VMCPU:             4,
+		VMMemory:          8,
+		VMDisk:            100,
+		VMMountType:       "virtiofs",
+		VMForwardSSHAgent: true,
+		VMNetworkAddress:  false,
+		CodexVersion:      "latest",
+		ClaudeCodeVersion: "latest",
+		HarnessPath:       "",
+		WorkspaceRoot:     "",
+		ActiveAgent:       "",
+		DefaultCommand:    "agent",
 	}
 
 	applyPlatformDefaults(&cfg, runtime.GOOS, runtime.GOARCH)
@@ -55,9 +59,9 @@ func defaultConfig() Config {
 
 func applyPlatformDefaults(cfg *Config, goos string, goarch string) {
 	if goos == "darwin" && goarch == "amd64" {
-		cfg.ColimaVMType = "qemu"
-		cfg.ColimaArch = "x86_64"
-		cfg.ColimaMountType = "sshfs"
+		cfg.VMType = "qemu"
+		cfg.VMArch = "x86_64"
+		cfg.VMMountType = "sshfs"
 	}
 }
 
@@ -151,6 +155,27 @@ func saveConfig(cfg Config) error {
 }
 
 func validateConfig(cfg Config) error {
+	switch cfg.VMBackend {
+	case "colima":
+	default:
+		return fmt.Errorf("unsupported vm_backend=%q (supported: colima)", cfg.VMBackend)
+	}
+	if cfg.VMProfile == "" {
+		return fmt.Errorf("vm_profile must not be empty")
+	}
+	if cfg.VMRuntime == "" {
+		return fmt.Errorf("vm_runtime must not be empty")
+	}
+	if cfg.VMType == "" {
+		return fmt.Errorf("vm_type must not be empty")
+	}
+	if cfg.VMArch == "" {
+		return fmt.Errorf("vm_arch must not be empty")
+	}
+	if cfg.VMMountType == "" {
+		return fmt.Errorf("vm_mount_type must not be empty")
+	}
+
 	switch cfg.ActiveAgent {
 	case "", "codex", "claude":
 	default:
@@ -163,14 +188,30 @@ func validateConfig(cfg Config) error {
 		return fmt.Errorf("default_command must be agent, shell, yolo, or empty")
 	}
 
-	if cfg.ColimaCPU <= 0 {
-		return fmt.Errorf("colima_cpu must be positive")
+	if cfg.VMCPU <= 0 {
+		return fmt.Errorf("vm_cpu must be positive")
 	}
-	if cfg.ColimaMemory <= 0 {
-		return fmt.Errorf("colima_memory must be positive")
+	if cfg.VMMemory <= 0 {
+		return fmt.Errorf("vm_memory must be positive")
 	}
-	if cfg.ColimaDisk <= 0 {
-		return fmt.Errorf("colima_disk must be positive")
+	if cfg.VMDisk <= 0 {
+		return fmt.Errorf("vm_disk must be positive")
 	}
 	return nil
+}
+
+func (cfg Config) vmConfig() vm.Config {
+	return vm.Config{
+		Backend:         cfg.VMBackend,
+		Profile:         cfg.VMProfile,
+		Runtime:         cfg.VMRuntime,
+		Type:            cfg.VMType,
+		Arch:            cfg.VMArch,
+		CPU:             cfg.VMCPU,
+		Memory:          cfg.VMMemory,
+		Disk:            cfg.VMDisk,
+		MountType:       cfg.VMMountType,
+		ForwardSSHAgent: cfg.VMForwardSSHAgent,
+		NetworkAddress:  cfg.VMNetworkAddress,
+	}
 }
