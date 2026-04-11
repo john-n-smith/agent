@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 var userConfigDir = os.UserConfigDir
@@ -29,7 +30,7 @@ type Config struct {
 }
 
 func defaultConfig() Config {
-	return Config{
+	cfg := Config{
 		ColimaProfile:         "harbour",
 		ColimaRuntime:         "docker",
 		ColimaVMType:          "vz",
@@ -46,6 +47,17 @@ func defaultConfig() Config {
 		WorkspaceRoot:         "",
 		ActiveAgent:           "",
 		DefaultCommand:        "agent",
+	}
+
+	applyPlatformDefaults(&cfg, runtime.GOOS, runtime.GOARCH)
+	return cfg
+}
+
+func applyPlatformDefaults(cfg *Config, goos string, goarch string) {
+	if goos == "darwin" && goarch == "amd64" {
+		cfg.ColimaVMType = "qemu"
+		cfg.ColimaArch = "x86_64"
+		cfg.ColimaMountType = "sshfs"
 	}
 }
 
