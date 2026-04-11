@@ -1,11 +1,37 @@
 package main
 
 import (
+	"bufio"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
+
+func TestPromptLineReadsSequentialLinesFromSharedInput(t *testing.T) {
+	previousInput := promptInput
+	promptInput = bufio.NewReader(strings.NewReader("first\nsecond\n"))
+	t.Cleanup(func() {
+		promptInput = previousInput
+	})
+
+	first, err := promptLine("first: ")
+	if err != nil {
+		t.Fatalf("promptLine() returned error: %v", err)
+	}
+	second, err := promptLine("second: ")
+	if err != nil {
+		t.Fatalf("promptLine() returned error: %v", err)
+	}
+
+	if first != "first" {
+		t.Fatalf("first promptLine() = %q, want %q", first, "first")
+	}
+	if second != "second" {
+		t.Fatalf("second promptLine() = %q, want %q", second, "second")
+	}
+}
 
 func TestCompletePathCandidatesForAbsolutePath(t *testing.T) {
 	base := t.TempDir()
