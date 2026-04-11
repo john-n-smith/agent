@@ -82,6 +82,31 @@ jobs:
             - host_path: ./your-org/lambdas
           EOF
 
+      - name: Seed CI Colima settings
+        run: |
+          config_dir="${HOME}/Library/Application Support/harbour"
+          mkdir -p "${config_dir}"
+          cat > "${config_dir}/config.json" <<'EOF'
+          {
+            "colima_profile": "harbour",
+            "colima_runtime": "docker",
+            "colima_vm_type": "qemu",
+            "colima_arch": "x86_64",
+            "colima_cpu": 2,
+            "colima_memory": 4,
+            "colima_disk": 20,
+            "colima_mount_type": "sshfs",
+            "colima_forward_ssh_agent": false,
+            "colima_network_address": false,
+            "codex_version": "latest",
+            "claude_code_version": "latest",
+            "harness_path": "",
+            "workspace_root": "",
+            "active_agent": "",
+            "default_command": "agent"
+          }
+          EOF
+
       - name: Run harbour provision
         run: |
           harness_path="${RUNNER_TEMP}/harbour-harness"
@@ -99,14 +124,14 @@ jobs:
           config_path="${HOME}/Library/Application Support/harbour/config.json"
           colima status -p harbour
           grep -F "\"active_agent\": \"${{ matrix.agent }}\"" "${config_path}"
-          ls -la "${workspace_root}"
+          colima ssh -p harbour -- /usr/bin/env bash -lc "ls -la \"${workspace_root}\""
           case "${{ matrix.agent }}" in
             codex)
-              test -L "${workspace_root}/AGENTS.md"
+              colima ssh -p harbour -- /usr/bin/env bash -lc "test -L \"${workspace_root}/AGENTS.md\""
               colima ssh -p harbour -- /usr/bin/env bash -lc 'command -v codex'
               ;;
             claude)
-              test -L "${workspace_root}/CLAUDE.md"
+              colima ssh -p harbour -- /usr/bin/env bash -lc "test -L \"${workspace_root}/CLAUDE.md\""
               colima ssh -p harbour -- /usr/bin/env bash -lc 'export PATH="${HOME}/.local/bin:${PATH}"; command -v claude'
               ;;
           esac
