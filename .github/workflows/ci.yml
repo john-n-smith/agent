@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   unit-test:
-    name: Test: unit tests
+    name: "Test: unit tests"
     runs-on: ubuntu-latest
 
     steps:
@@ -32,7 +32,7 @@ jobs:
         run: make test
 
   provision:
-    name: Test: provision on macOS Intel (${{ matrix.agent }})
+    name: "Test: provision on macOS Intel (${{ matrix.agent }})"
     # GitHub-hosted Apple Silicon runners exist, but hosted Colima coverage is
     # not reliable there yet because nested virtualisation support is still a blocker.
     # Add Apple Silicon macOS coverage when that runner path is viable.
