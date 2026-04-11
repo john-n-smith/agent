@@ -8,7 +8,7 @@ on:
 
 jobs:
   unit-test:
-    name: Unit Test
+    name: Test: unit tests
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +25,7 @@ jobs:
         run: make test
 
   provision:
-    name: Provision (macOS Intel, ${{ matrix.agent }})
+    name: Test: provision on macOS Intel (${{ matrix.agent }})
     # GitHub-hosted Apple Silicon runners exist, but hosted Colima coverage is
     # not reliable there yet because nested virtualisation support is still a blocker.
     # Add Apple Silicon macOS coverage when that runner path is viable.
@@ -56,7 +56,7 @@ jobs:
       - name: Build Harbour
         run: go build -o bin/harbour ./cmd/harbour
 
-      - name: Check out harness template
+      - name: Set up harness template
         run: |
           harness_path="${RUNNER_TEMP}/harbour-harness"
           git clone --depth 1 https://github.com/agent-harbour/harbour-harness-template.git "${harness_path}"
@@ -65,7 +65,7 @@ jobs:
             - host_path: harbour
           EOF
 
-      - name: Run provision
+      - name: Run harbour provision
         run: |
           harness_path="${RUNNER_TEMP}/harbour-harness"
           workspace_root="$(dirname "$GITHUB_WORKSPACE")"
@@ -76,7 +76,7 @@ jobs:
             printf '\n'
           } | ./bin/harbour provision
 
-      - name: Verify provision result
+      - name: Verify provisioned agent
         run: |
           workspace_root="$(dirname "$GITHUB_WORKSPACE")"
           config_path="${HOME}/Library/Application Support/harbour/config.json"
