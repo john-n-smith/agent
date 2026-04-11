@@ -11,9 +11,11 @@ import (
 	"github.com/peterh/liner"
 )
 
+var promptInput = bufio.NewReader(os.Stdin)
+
 func promptLine(prompt string) (string, error) {
 	fmt.Fprint(os.Stderr, prompt)
-	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	line, err := promptInput.ReadString('\n')
 	if err != nil && len(line) == 0 {
 		return "", err
 	}

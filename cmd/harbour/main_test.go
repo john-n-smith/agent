@@ -151,6 +151,63 @@ func TestLoadConfigCreatesDefaultConfig(t *testing.T) {
 	}
 }
 
+func TestApplyPlatformDefaults(t *testing.T) {
+	tests := []struct {
+		name      string
+		goos      string
+		goarch    string
+		wantVM    string
+		wantArch  string
+		wantMount string
+	}{
+		{
+			name:      "Intel macOS",
+			goos:      "darwin",
+			goarch:    "amd64",
+			wantVM:    "qemu",
+			wantArch:  "x86_64",
+			wantMount: "sshfs",
+		},
+		{
+			name:      "Apple Silicon macOS",
+			goos:      "darwin",
+			goarch:    "arm64",
+			wantVM:    "vz",
+			wantArch:  "aarch64",
+			wantMount: "virtiofs",
+		},
+		{
+			name:      "Linux amd64",
+			goos:      "linux",
+			goarch:    "amd64",
+			wantVM:    "vz",
+			wantArch:  "aarch64",
+			wantMount: "virtiofs",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := defaultConfig()
+			cfg.ColimaVMType = "vz"
+			cfg.ColimaArch = "aarch64"
+			cfg.ColimaMountType = "virtiofs"
+
+			applyPlatformDefaults(&cfg, tt.goos, tt.goarch)
+
+			if cfg.ColimaVMType != tt.wantVM {
+				t.Fatalf("applyPlatformDefaults().ColimaVMType = %q, want %q", cfg.ColimaVMType, tt.wantVM)
+			}
+			if cfg.ColimaArch != tt.wantArch {
+				t.Fatalf("applyPlatformDefaults().ColimaArch = %q, want %q", cfg.ColimaArch, tt.wantArch)
+			}
+			if cfg.ColimaMountType != tt.wantMount {
+				t.Fatalf("applyPlatformDefaults().ColimaMountType = %q, want %q", cfg.ColimaMountType, tt.wantMount)
+			}
+		})
+	}
+}
+
 func TestSaveConfigRoundTrip(t *testing.T) {
 	withTestConfigDir(t)
 

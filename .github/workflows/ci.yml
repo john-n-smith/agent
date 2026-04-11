@@ -68,18 +68,43 @@ jobs:
       - name: Set up harness template
         run: |
           harness_path="${RUNNER_TEMP}/harbour-harness"
-          harness_ref="265cd943503346368d1e99a047f27520f43c8009"
+          workspace_root="${RUNNER_TEMP}/workspace"
+          harness_ref="6d0d5625c120367e4051ee6d398830130040a54d"
           git clone https://github.com/agent-harbour/harbour-harness-template.git "${harness_path}"
           git -C "${harness_path}" checkout "${harness_ref}"
-          cat > "${harness_path}/repos.yaml" <<'EOF'
-          repos:
-            - host_path: harbour
+          mkdir -p "${workspace_root}/your-org/frontend"
+          mkdir -p "${workspace_root}/your-org/backend"
+          mkdir -p "${workspace_root}/your-org/lambdas"
+
+      - name: Seed CI Colima settings
+        run: |
+          config_dir="${HOME}/Library/Application Support/harbour"
+          mkdir -p "${config_dir}"
+          cat > "${config_dir}/config.json" <<'EOF'
+          {
+            "colima_profile": "harbour",
+            "colima_runtime": "docker",
+            "colima_vm_type": "qemu",
+            "colima_arch": "x86_64",
+            "colima_cpu": 2,
+            "colima_memory": 4,
+            "colima_disk": 20,
+            "colima_mount_type": "sshfs",
+            "colima_forward_ssh_agent": false,
+            "colima_network_address": false,
+            "codex_version": "latest",
+            "claude_code_version": "latest",
+            "harness_path": "",
+            "workspace_root": "",
+            "active_agent": "",
+            "default_command": "agent"
+          }
           EOF
 
       - name: Run harbour provision
         run: |
           harness_path="${RUNNER_TEMP}/harbour-harness"
-          workspace_root="$(dirname "$GITHUB_WORKSPACE")"
+          workspace_root="${RUNNER_TEMP}/workspace"
           {
             printf '%s\n' "${harness_path}"
             printf '%s\n' "${workspace_root}"
@@ -89,21 +114,19 @@ jobs:
 
       - name: Verify provisioned agent
         run: |
-          workspace_root="$(dirname "$GITHUB_WORKSPACE")"
-          repo_root="${GITHUB_WORKSPACE}"
+          workspace_root="${RUNNER_TEMP}/workspace"
           config_path="${HOME}/Library/Application Support/harbour/config.json"
           colima status -p harbour
           grep -F "\"active_agent\": \"${{ matrix.agent }}\"" "${config_path}"
-          ls -la "${workspace_root}"
-          ls -la "${repo_root}"
+          colima ssh -p harbour -- /usr/bin/env bash -lc "ls -la \"${workspace_root}\""
           case "${{ matrix.agent }}" in
             codex)
-              test -L "${workspace_root}/AGENTS.md" || test -L "${repo_root}/AGENTS.md"
+              colima ssh -p harbour -- /usr/bin/env bash -lc "test -L \"${workspace_root}/AGENTS.md\""
               colima ssh -p harbour -- /usr/bin/env bash -lc 'command -v codex'
               ;;
             claude)
-              test -L "${workspace_root}/CLAUDE.md" || test -L "${repo_root}/CLAUDE.md"
-              colima ssh -p harbour -- /usr/bin/env bash -lc 'command -v claude'
+              colima ssh -p harbour -- /usr/bin/env bash -lc "test -L \"${workspace_root}/CLAUDE.md\""
+              colima ssh -p harbour -- /usr/bin/env bash -lc 'export PATH="${HOME}/.local/bin:${PATH}"; command -v claude'
               ;;
           esac
 
