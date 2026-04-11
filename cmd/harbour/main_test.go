@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"os"
@@ -229,6 +230,80 @@ func TestSaveConfigRoundTrip(t *testing.T) {
 
 	if loaded != cfg {
 		t.Fatalf("loadConfig(false) = %#v, want %#v", loaded, cfg)
+	}
+}
+
+func TestLoadConfigMigratesLegacyColimaKeys(t *testing.T) {
+	configDir := withTestConfigDir(t)
+	path := filepath.Join(configDir, "harbour", "config.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll() returned error: %v", err)
+	}
+
+	legacyConfig := `{
+  "colima_profile": "legacy-profile",
+  "colima_runtime": "docker",
+  "colima_vm_type": "qemu",
+  "colima_arch": "x86_64",
+  "colima_cpu": 2,
+  "colima_memory": 4,
+  "colima_disk": 20,
+  "colima_mount_type": "sshfs",
+  "colima_forward_ssh_agent": false,
+  "colima_network_address": false,
+  "codex_version": "latest",
+  "claude_code_version": "latest",
+  "harness_path": "/tmp/harness",
+  "workspace_root": "/tmp/workspace",
+  "active_agent": "codex",
+  "default_command": "agent"
+}
+`
+	if err := os.WriteFile(path, []byte(legacyConfig), 0o644); err != nil {
+		t.Fatalf("WriteFile() returned error: %v", err)
+	}
+
+	previousInput := promptInput
+	promptInput = bufio.NewReader(strings.NewReader("yes\n"))
+	t.Cleanup(func() {
+		promptInput = previousInput
+	})
+
+	got, err := loadConfig(false)
+	if err != nil {
+		t.Fatalf("loadConfig(false) returned error: %v", err)
+	}
+
+	want := defaultConfig()
+	want.VMProfile = "legacy-profile"
+	want.VMRuntime = "docker"
+	want.VMType = "qemu"
+	want.VMArch = "x86_64"
+	want.VMCPU = 2
+	want.VMMemory = 4
+	want.VMDisk = 20
+	want.VMMountType = "sshfs"
+	want.VMForwardSSHAgent = false
+	want.VMNetworkAddress = false
+	want.HarnessPath = "/tmp/harness"
+	want.WorkspaceRoot = "/tmp/workspace"
+	want.ActiveAgent = "codex"
+	want.DefaultCommand = "agent"
+
+	if got != want {
+		t.Fatalf("loadConfig(false) = %#v, want %#v", got, want)
+	}
+
+	rewritten, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() returned error: %v", err)
+	}
+	rewrittenText := string(rewritten)
+	if !strings.Contains(rewrittenText, "\"vm_backend\": \"colima\"") {
+		t.Fatalf("rewritten config did not contain vm_backend:\n%s", rewrittenText)
+	}
+	if strings.Contains(rewrittenText, "\"colima_profile\"") {
+		t.Fatalf("rewritten config still contained legacy colima_* keys:\n%s", rewrittenText)
 	}
 }
 
