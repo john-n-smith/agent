@@ -29,18 +29,18 @@ Recommended host-side split:
 - `harbour`
   The shareable CLI repo
 - `harbour-harness`
-  Private local state such as `AGENTS.md`, `repos.yaml`, and `skills/`
+  Private local state such as `AGENTS.md` and `skills/`
 
-Harbour treats `harbour-harness/repos.yaml` as the source of truth for mounted
-repo paths.
+Harbour mounts the configured work directory and expects the harness to live
+inside it.
 
 ## VM Runtime
 
 Harbour keeps the VM setup model intentionally simple:
 
-- Work repos are mounted from `repos.yaml`
-- Missing repo paths are warned and skipped
-- The selected root instruction file is linked at the workspace root
+- The configured work directory is mounted once
+- The harness must live inside that work directory
+- The selected root instruction file is linked at the workspace path
 - Custom skills are symlinked into the active agent directory
 - The active agent runs directly inside the VM shell
 

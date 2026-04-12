@@ -8,7 +8,7 @@ Like Docker Compose, but for agent harnesses.
 
 - Run agents in a sandbox (Colima VM)
 - Work across multiple repositories by default
-- Define and share your harness (`repos.yaml`, `AGENTS.md`, `skills/`)
+- Define and share your harness (`AGENTS.md`, `skills/`)
 - Keep your existing Docker workflow (via docker context)
 - Supports Claude or Codex
 
@@ -27,15 +27,32 @@ Homebrew installs Colima automatically for the formula.
 
 1. Create your harness
 
-   - `repos.yaml` lists repo mount paths
    - `AGENTS.md` contains shared instructions
    - `skills/` contains optional custom skills
 
    See https://github.com/agent-harbour/harbour-harness-template for an example.
 
-   Relative `host_path` values in `repos.yaml` are resolved from `workspace_root`.
+2. Curate your workspace
 
-2. Provision Harbour
+Your "workspace" is the directory that Harbour mounts into the VM. It should contain the repos you want to work on, plus
+your Harbour harness.
+
+Example workspace:
+
+   ```
+   ~/git
+   |-- harbour-harness
+   |   |-- AGENTS.md
+   |   `-- skills
+   |-- my-org
+   |   |-- front-end
+   |   |-- backend
+   |   `-- backend-hotfix-worktree
+   `-- personal
+       `-- dotfiles
+   ```
+
+3. Provision Harbour
 
    ```sh
    harbour provision
@@ -47,12 +64,12 @@ Homebrew installs Colima automatically for the formula.
 
    Provision prompts for:
 
-   - Path to your harness
-   - Workspace root (where your repos live)
+   - `workspace_path`
+   - `harness_path`
    - Agent to provision
    - The default `harbour` command
 
-3. Run the agent
+4. Run the agent
 
 ```sh
 harbour
@@ -97,7 +114,7 @@ Harbour stores its config as a single JSON file.
   "codex_version": "latest",
   "claude_code_version": "latest",
   "harness_path": "",
-  "workspace_root": "",
+  "workspace_path": "",
   "active_agent": "",
   "default_command": "agent"
 }
