@@ -67,3 +67,17 @@ func ensureDirectory(path string, label string) error {
 	}
 	return nil
 }
+
+func ensureSubdirectory(path string, parent string, pathLabel string, parentLabel string) error {
+	relativePath, err := filepath.Rel(parent, path)
+	if err != nil {
+		return err
+	}
+	if relativePath == "." {
+		return fmt.Errorf("%s must be inside %s, not equal to it: %s", pathLabel, parentLabel, path)
+	}
+	if relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(os.PathSeparator)) {
+		return fmt.Errorf("%s must be inside %s: %s is outside %s", pathLabel, parentLabel, path, parent)
+	}
+	return nil
+}

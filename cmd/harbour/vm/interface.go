@@ -20,7 +20,7 @@ type Backend interface {
 	Name() string
 	EnsureInstalled() error
 	Status() (bool, error)
-	CurrentMountLines() ([]string, error)
+	HasExactMount(mount string) (bool, error)
 	Start(mounts []string) error
 	Stop() error
 	RunRemoteCommand(command string) error

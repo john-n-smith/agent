@@ -7,7 +7,7 @@ harbour_harness_skills_dir=$4
 harbour_harness_agents_b64=$5
 host_uid=$6
 host_gid=$7
-workspace_root=$8
+workspace_path=$8
 
 agent_bin_dir="${HOME}/.local/bin"
 codex_path="${agent_bin_dir}/codex"
@@ -88,8 +88,8 @@ case "${selected_agent}" in
     rm -f "${claude_path}"
     sync_skills "${codex_skills_dir}"
 
-    sudo ln -sfn "${harbour_harness_agents_path}" "${workspace_root}/AGENTS.md"
-    sudo rm -f "${workspace_root}/CLAUDE.md"
+    sudo ln -sfn "${harbour_harness_agents_path}" "${workspace_path}/AGENTS.md"
+    sudo rm -f "${workspace_path}/CLAUDE.md"
     ;;
   claude)
     current_version=""
@@ -113,7 +113,7 @@ case "${selected_agent}" in
     rm -f "${codex_path}"
     sync_skills "${claude_skills_dir}"
 
-    sudo ln -sfn "${harbour_harness_agents_path}" "${workspace_root}/CLAUDE.md"
-    sudo rm -f "${workspace_root}/AGENTS.md"
+    sudo ln -sfn "${harbour_harness_agents_path}" "${workspace_path}/CLAUDE.md"
+    sudo rm -f "${workspace_path}/AGENTS.md"
     ;;
 esac

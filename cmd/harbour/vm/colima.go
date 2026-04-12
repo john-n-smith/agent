@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -31,22 +30,23 @@ func (c Colima) Status() (bool, error) {
 	return commandSucceeded("colima", "status", "-p", c.cfg.Profile)
 }
 
-func (c Colima) CurrentMountLines() ([]string, error) {
+func (c Colima) HasExactMount(expectedMount string) (bool, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	profileConfig := filepath.Join(home, ".colima", c.cfg.Profile, "colima.yaml")
 	file, err := os.Open(profileConfig)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return false, nil
 		}
-		return nil, err
+		return false, err
 	}
 	defer file.Close()
 
-	var mounts []string
+	var mountsFound int
+	var matched bool
 	scanner := bufio.NewScanner(file)
 	inMounts := false
 	location := ""
@@ -72,13 +72,16 @@ func (c Colima) CurrentMountLines() ([]string, error) {
 			if strings.TrimSpace(strings.TrimPrefix(trimmed, "writable:")) == "true" {
 				mode = "rw"
 			}
-			mounts = append(mounts, fmt.Sprintf("%s|%s", location, mode))
+			mountsFound++
+			if fmt.Sprintf("%s|%s", location, mode) == expectedMount {
+				matched = true
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return false, err
 	}
-	return normalizeMountLines(mounts), nil
+	return mountsFound == 1 && matched, nil
 }
 
 func (c Colima) Start(mounts []string) error {
@@ -164,24 +167,6 @@ func commandSucceeded(name string, args ...string) (bool, error) {
 		return false, nil
 	}
 	return false, err
-}
-
-func normalizeMountLines(mounts []string) []string {
-	if len(mounts) == 0 {
-		return nil
-	}
-
-	sorted := append([]string(nil), mounts...)
-	sort.Strings(sorted)
-
-	normalized := sorted[:0]
-	for _, mount := range sorted {
-		if len(normalized) > 0 && normalized[len(normalized)-1] == mount {
-			continue
-		}
-		normalized = append(normalized, mount)
-	}
-	return normalized
 }
 
 func shellQuoteArgs(args []string) string {

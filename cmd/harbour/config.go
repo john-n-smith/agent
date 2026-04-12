@@ -27,7 +27,7 @@ type Config struct {
 	CodexVersion      string `json:"codex_version"`
 	ClaudeCodeVersion string `json:"claude_code_version"`
 	HarnessPath       string `json:"harness_path"`
-	WorkspaceRoot     string `json:"workspace_root"`
+	WorkspacePath     string `json:"workspace_path"`
 	ActiveAgent       string `json:"active_agent"`
 	DefaultCommand    string `json:"default_command"`
 }
@@ -48,7 +48,7 @@ func defaultConfig() Config {
 		CodexVersion:      "latest",
 		ClaudeCodeVersion: "latest",
 		HarnessPath:       "",
-		WorkspaceRoot:     "",
+		WorkspacePath:     "",
 		ActiveAgent:       "",
 		DefaultCommand:    "agent",
 	}
