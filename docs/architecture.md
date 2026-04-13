@@ -40,8 +40,8 @@ Harbour keeps the VM setup model intentionally simple:
 
 - The configured work directory is mounted once
 - The harness must live inside that work directory
-- The selected root instruction file is linked into the active agent home directory
-- Custom skills are symlinked into the active agent directory
+- The selected root instruction file is linked into the VM user's home directory
+- The harness `skills/` directory is linked into the selected agent's skills directory in the VM user's home
 - The active agent runs directly inside the VM shell
 
 The host-side CLI is Go. The in-VM provision step is still an embedded Bash

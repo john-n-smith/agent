@@ -36,7 +36,7 @@ Provisioning will prompt for:
 
 Harbour will stop using `repos.yaml` as a source of truth for mounts.
 
-Harbour will continue to link agent instruction file into `workspace_path` and sync skills from `harness_path`.
+Harbour will link the selected agent instruction file into the VM user's home directory and link the harness skills directory into the selected agent's skills directory in the VM user's home.
 
 ## Consequences
 

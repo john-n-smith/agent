@@ -28,7 +28,7 @@ Homebrew installs Colima automatically for the formula.
 1. Create your harness
 
    - `AGENTS.md` contains shared instructions
-   - `skills/` contains optional custom skills
+   - `skills/` contains optional custom skills that Harbour links into the selected agent's skills directory in the VM user's home
 
    See https://github.com/agent-harbour/harbour-harness-template for an example.
 
