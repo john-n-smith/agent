@@ -208,9 +208,9 @@ func runProvision() error {
 
 	switch selectedAgent {
 	case "codex":
-		fmt.Printf("Provisioned Codex %s, linked ~/.codex/AGENTS.md to the harness, and synced custom skills.\n", requestedVersion)
+		fmt.Printf("Provisioned Codex %s, linked ~/.codex/AGENTS.md to the harness, and linked the harness skills directory into ~/.codex/skills.\n", requestedVersion)
 	case "claude":
-		fmt.Printf("Provisioned Claude Code %s, linked ~/.claude/CLAUDE.md to the harness, and synced custom skills.\n", requestedVersion)
+		fmt.Printf("Provisioned Claude Code %s, linked ~/.claude/CLAUDE.md to the harness, and linked the harness skills directory into ~/.claude/skills.\n", requestedVersion)
 	}
 	fmt.Printf("Default command is harbour %s.\n", cfg.DefaultCommand)
 	fmt.Println("Run harbour to use the default command, or run harbour agent, harbour yolo, or harbour shell explicitly.")
