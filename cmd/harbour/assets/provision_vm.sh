@@ -40,10 +40,10 @@ mkdir -p "${agent_bin_dir}"
 sync_skills() {
   local target_skills_dir=$1
   mkdir -p "$(dirname "${target_skills_dir}")"
+  rm -rf "${target_skills_dir}"
   if [[ -d "${harbour_harness_skills_dir}" ]]; then
-    ln -sfn "${harbour_harness_skills_dir}" "${target_skills_dir}"
+    ln -s "${harbour_harness_skills_dir}" "${target_skills_dir}"
   else
-    rm -f "${target_skills_dir}"
     mkdir -p "${target_skills_dir}"
   fi
 }
