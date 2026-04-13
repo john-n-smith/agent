@@ -82,19 +82,16 @@ func runProvision() error {
 	if err := ensureSubdirectory(cfg.HarnessPath, cfg.WorkspacePath, "harness_path", "workspace_path"); err != nil {
 		return err
 	}
-	fmt.Printf("harness_path=%s\n", cfg.HarnessPath)
 
 	defaultAgent := "codex"
 	if cfg.ActiveAgent != "" {
 		defaultAgent = cfg.ActiveAgent
 	}
-	fmt.Printf("active_agent=%s\n", defaultAgent)
 
 	defaultCommand := "agent"
 	if cfg.DefaultCommand != "" {
 		defaultCommand = cfg.DefaultCommand
 	}
-	fmt.Printf("default_command=%s\n", defaultCommand)
 
 	selectedAgent, err := promptChoice(
 		fmt.Sprintf("Select the agent to provision [codex/claude] [%s]: ", defaultAgent),
@@ -211,9 +208,9 @@ func runProvision() error {
 
 	switch selectedAgent {
 	case "codex":
-		fmt.Printf("Provisioned Codex %s, linked %s/AGENTS.md, and synced custom skills.\n", requestedVersion, cfg.WorkspacePath)
+		fmt.Printf("Provisioned Codex %s, linked ~/.codex/AGENTS.md to the harness, and synced custom skills.\n", requestedVersion)
 	case "claude":
-		fmt.Printf("Provisioned Claude Code %s, linked %s/CLAUDE.md, and synced custom skills.\n", requestedVersion, cfg.WorkspacePath)
+		fmt.Printf("Provisioned Claude Code %s, linked ~/.claude/CLAUDE.md to the harness, and synced custom skills.\n", requestedVersion)
 	}
 	fmt.Printf("Default command is harbour %s.\n", cfg.DefaultCommand)
 	fmt.Println("Run harbour to use the default command, or run harbour agent, harbour yolo, or harbour shell explicitly.")
@@ -269,16 +266,16 @@ func runAgent(yolo bool) error {
 
 	agentName := ""
 	agentCommand := ""
-	instructionFile := ""
+	instructionPath := ""
 	switch cfg.ActiveAgent {
 	case "codex":
 		agentName = "Codex"
 		agentCommand = "codex"
-		instructionFile = "AGENTS.md"
+		instructionPath = "${HOME}/.codex/AGENTS.md"
 	case "claude":
 		agentName = "Claude Code"
 		agentCommand = "claude"
-		instructionFile = "CLAUDE.md"
+		instructionPath = "${HOME}/.claude/CLAUDE.md"
 	default:
 		return fmt.Errorf("unsupported active_agent=%s in %s. Run harbour provision and choose codex or claude", cfg.ActiveAgent, configPath)
 	}
@@ -288,7 +285,7 @@ func runAgent(yolo bool) error {
 		return err
 	}
 
-	remoteScript := buildAgentRemoteScript(cfg, yolo, agentCommand, instructionFile)
+	remoteScript := buildAgentRemoteScript(cfg, yolo, agentCommand, instructionPath)
 	return vmBackend.RunRemoteCommand(remoteScript)
 }
 
@@ -313,7 +310,7 @@ func requireProvisionedConfig(requireHarness bool) (Config, string, error) {
 	return cfg, cfgPath, nil
 }
 
-func buildAgentRemoteScript(cfg Config, yolo bool, agentCommand string, instructionFile string) string {
+func buildAgentRemoteScript(cfg Config, yolo bool, agentCommand string, instructionPath string) string {
 	yoloMode := "false"
 	if yolo {
 		yoloMode = "true"
@@ -325,7 +322,7 @@ workspace_path=%q
 harbour_harness_dir=%q
 yolo_mode=%q
 agent_command=%q
-instruction_file=%q
+instruction_path=%q
 export PATH="${HOME}/.local/bin:${PATH}"
 
 if ! command -v "${agent_command}" >/dev/null 2>&1; then
@@ -339,8 +336,8 @@ if [[ ! -d "${workspace_path}" ]]; then
   exit 127
 fi
 
-if [[ ! -f "${workspace_path}/${instruction_file}" ]]; then
-  echo "${workspace_path}/${instruction_file} is missing in the VM." >&2
+if [[ ! -f "${instruction_path}" ]]; then
+  echo "${instruction_path} is missing in the VM." >&2
   echo "Run harbour provision." >&2
   exit 127
 fi
@@ -371,5 +368,5 @@ case "${agent_command}" in
 esac
 
 exec "${agent_command}" "${args[@]}"
-`, cfg.WorkspacePath, cfg.HarnessPath, yoloMode, agentCommand, instructionFile)
+`, cfg.WorkspacePath, cfg.HarnessPath, yoloMode, agentCommand, instructionPath)
 }

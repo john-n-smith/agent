@@ -12,6 +12,8 @@ workspace_path=$8
 agent_bin_dir="${HOME}/.local/bin"
 codex_path="${agent_bin_dir}/codex"
 claude_path="${agent_bin_dir}/claude"
+codex_agents_path="${HOME}/.codex/AGENTS.md"
+claude_agents_path="${HOME}/.claude/CLAUDE.md"
 codex_skills_dir="${HOME}/.codex/skills"
 claude_skills_dir="${HOME}/.claude/skills"
 tmpdir=$(mktemp -d)
@@ -37,12 +39,12 @@ mkdir -p "${agent_bin_dir}"
 
 sync_skills() {
   local target_skills_dir=$1
-  mkdir -p "${target_skills_dir}"
+  mkdir -p "$(dirname "${target_skills_dir}")"
   if [[ -d "${harbour_harness_skills_dir}" ]]; then
-    while IFS= read -r skill_dir; do
-      skill_name=$(basename "${skill_dir}")
-      ln -sfn "${skill_dir}" "${target_skills_dir}/${skill_name}"
-    done < <(find "${harbour_harness_skills_dir}" -mindepth 1 -maxdepth 1 -type d | sort)
+    ln -sfn "${harbour_harness_skills_dir}" "${target_skills_dir}"
+  else
+    rm -f "${target_skills_dir}"
+    mkdir -p "${target_skills_dir}"
   fi
 }
 
@@ -86,10 +88,9 @@ case "${selected_agent}" in
     fi
 
     rm -f "${claude_path}"
+    mkdir -p "$(dirname "${codex_agents_path}")"
+    ln -sfn "${harbour_harness_agents_path}" "${codex_agents_path}"
     sync_skills "${codex_skills_dir}"
-
-    sudo ln -sfn "${harbour_harness_agents_path}" "${workspace_path}/AGENTS.md"
-    sudo rm -f "${workspace_path}/CLAUDE.md"
     ;;
   claude)
     current_version=""
@@ -111,9 +112,8 @@ case "${selected_agent}" in
     fi
 
     rm -f "${codex_path}"
+    mkdir -p "$(dirname "${claude_agents_path}")"
+    ln -sfn "${harbour_harness_agents_path}" "${claude_agents_path}"
     sync_skills "${claude_skills_dir}"
-
-    sudo ln -sfn "${harbour_harness_agents_path}" "${workspace_path}/CLAUDE.md"
-    sudo rm -f "${workspace_path}/AGENTS.md"
     ;;
 esac

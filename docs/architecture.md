@@ -40,7 +40,7 @@ Harbour keeps the VM setup model intentionally simple:
 
 - The configured work directory is mounted once
 - The harness must live inside that work directory
-- The selected root instruction file is linked at the workspace path
+- The selected root instruction file is linked into the active agent home directory
 - Custom skills are symlinked into the active agent directory
 - The active agent runs directly inside the VM shell
 
