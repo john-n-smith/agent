@@ -4,6 +4,7 @@ VERSION ?=
 DIST_DIR := dist
 RELEASE_SRC_DIR := build/$(VERSION)
 RELEASE_TAG_PATTERN := ^v[0-9]+\.[0-9]+\.[0-9]+$$
+GOFMT_FILES := $$(find cmd -name '*.go' -type f)
 
 .PHONY: help build dist require-release-version prepare-dist-source fmt fmt-check vet test
 
@@ -48,10 +49,10 @@ $(DIST_DIR)/sha256sums.txt: $(DIST_DIR)/harbour-$(VERSION)-darwin-amd64.tar.gz $
 	cd $(DIST_DIR) && shasum -a 256 harbour-$(VERSION)-darwin-amd64.tar.gz harbour-$(VERSION)-darwin-arm64.tar.gz > sha256sums.txt
 
 fmt:
-	gofmt -w $$(find . -name '*.go' -type f)
+	gofmt -w $(GOFMT_FILES)
 
 fmt-check:
-	@test -z "$$(gofmt -l $$(find . -name '*.go' -type f))" || (echo "Run make fmt" >&2; gofmt -l $$(find . -name '*.go' -type f); exit 1)
+	@test -z "$$(gofmt -l $(GOFMT_FILES))" || (echo "Run make fmt" >&2; gofmt -l $(GOFMT_FILES); exit 1)
 
 vet:
 	go vet ./...
