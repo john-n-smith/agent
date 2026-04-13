@@ -110,8 +110,8 @@ jobs:
 
       - name: Run harbour provision
         run: |
-          harness_path="${RUNNER_TEMP}/harbour-harness"
           workspace_path="${RUNNER_TEMP}/workspace"
+          harness_path="${workspace_path}/harbour-harness"
           {
             printf '%s\n' "${workspace_path}"
             printf '%s\n' "${harness_path}"
