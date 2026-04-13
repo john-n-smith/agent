@@ -73,8 +73,8 @@ jobs:
 
       - name: Set up harness template
         run: |
-          harness_path="${RUNNER_TEMP}/harbour-harness"
           workspace_path="${RUNNER_TEMP}/workspace"
+          harness_path="${workspace_path}/harbour-harness"
           harness_ref="6d0d5625c120367e4051ee6d398830130040a54d"
           git clone https://github.com/agent-harbour/harbour-harness-template.git "${harness_path}"
           git -C "${harness_path}" checkout "${harness_ref}"
