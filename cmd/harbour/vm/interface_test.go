@@ -30,7 +30,7 @@ func TestResolveRejectsUnsupportedBackend(t *testing.T) {
 	if err == nil {
 		t.Fatal("Resolve() returned nil error")
 	}
-	if !strings.Contains(err.Error(), `unsupported vm_backend="lima" (supported: colima)`) {
+	if !strings.Contains(err.Error(), "Unsupported `vm_backend`=\"lima\" (supported: colima)") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

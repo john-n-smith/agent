@@ -16,9 +16,18 @@ import _ "embed"
 var provisionVMScript string
 
 func runProvision() error {
-	cfg, err := loadConfig(true)
+	cfgPath, err := configPath()
 	if err != nil {
 		return err
+	}
+	fmt.Printf("Using config at %s\n\n", cfgPath)
+
+	cfg, warning, err := loadConfigForProvision(cfgPath)
+	if err != nil {
+		return err
+	}
+	if warning != "" {
+		fmt.Fprintf(os.Stderr, "Notice: invalid config: %s\n\n", warning)
 	}
 	vmBackend, err := vm.Resolve(cfg.vmConfig())
 	if err != nil {
@@ -27,22 +36,19 @@ func runProvision() error {
 	if err := vmBackend.EnsureInstalled(); err != nil {
 		return err
 	}
-	cfgPath, err := configPath()
+
+	workspacePromptDefault := cfg.WorkspacePath
+	if workspacePromptDefault == "" {
+		workspacePromptDefault = defaultWorkspacePromptPath()
+	}
+	reply, err := promptPathWithDefault("Workspace path: ", workspacePromptDefault)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Using Harbour config %s\n", cfgPath)
-
-	if cfg.WorkspacePath == "" {
-		reply, err := promptPath("Workspace path, e.g. ~/git: ")
-		if err != nil {
-			return err
-		}
-		if reply == "" {
-			return fmt.Errorf("workspace_path is required")
-		}
-		cfg.WorkspacePath = reply
+	if reply == "" {
+		return fmt.Errorf("workspace_path is required")
 	}
+	cfg.WorkspacePath = reply
 	cfg.WorkspacePath, err = canonicalPath(cfg.WorkspacePath)
 	if err != nil {
 		return err
@@ -50,18 +56,22 @@ func runProvision() error {
 	if err := ensureDirectory(cfg.WorkspacePath, "workspace_path"); err != nil {
 		return err
 	}
-	fmt.Printf("workspace_path=%s\n", cfg.WorkspacePath)
 
-	if cfg.HarnessPath == "" {
-		reply, err := promptPath("Harness path inside the workspace path, e.g. ~/git/.harbour-harness: ")
-		if err != nil {
-			return err
-		}
-		if reply == "" {
-			return fmt.Errorf("harness_path is required")
-		}
-		cfg.HarnessPath = reply
+	harnessPromptDefault := cfg.HarnessPath
+	if harnessPromptDefault == "" {
+		harnessPromptDefault = defaultHarnessPromptPath(reply)
 	}
+	reply, err = promptPathWithDefault(
+		"Harness path: ",
+		harnessPromptDefault,
+	)
+	if err != nil {
+		return err
+	}
+	if reply == "" {
+		return fmt.Errorf("harness_path is required")
+	}
+	cfg.HarnessPath = reply
 	cfg.HarnessPath, err = canonicalPath(cfg.HarnessPath)
 	if err != nil {
 		return err

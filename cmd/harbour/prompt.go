@@ -39,6 +39,37 @@ func promptPath(prompt string) (string, error) {
 	return strings.TrimSpace(line), nil
 }
 
+func promptPathWithDefault(prompt string, defaultValue string) (string, error) {
+	fullPrompt := prompt
+	if defaultValue != "" {
+		fullPrompt = fmt.Sprintf("%s [%s]: ", strings.TrimSuffix(prompt, ": "), defaultValue)
+	}
+
+	reply, err := promptPath(fullPrompt)
+	if err != nil {
+		return "", err
+	}
+	if reply == "" {
+		return defaultValue, nil
+	}
+	return reply, nil
+}
+
+func defaultWorkspacePromptPath() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil || homeDir == "" {
+		return ""
+	}
+	return filepath.Join(homeDir, "git")
+}
+
+func defaultHarnessPromptPath(workspacePath string) string {
+	if workspacePath == "" {
+		return ""
+	}
+	return filepath.Join(workspacePath, "harbour-harness")
+}
+
 func promptChoice(prompt string, allowed []string, defaultValue string) (string, error) {
 	allowedSet := map[string]struct{}{}
 	for _, value := range allowed {

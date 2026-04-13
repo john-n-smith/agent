@@ -33,6 +33,57 @@ func TestPromptLineReadsSequentialLinesFromSharedInput(t *testing.T) {
 	}
 }
 
+func TestPromptPathWithDefaultReturnsDefaultOnEmptyInput(t *testing.T) {
+	previousInput := promptInput
+	promptInput = bufio.NewReader(strings.NewReader("\n"))
+	t.Cleanup(func() {
+		promptInput = previousInput
+	})
+
+	got, err := promptPathWithDefault("Workspace path: ", "/tmp/workspace")
+	if err != nil {
+		t.Fatalf("promptPathWithDefault() returned error: %v", err)
+	}
+	if got != "/tmp/workspace" {
+		t.Fatalf("promptPathWithDefault() = %q, want %q", got, "/tmp/workspace")
+	}
+}
+
+func TestPromptPathWithDefaultUsesEnteredValue(t *testing.T) {
+	previousInput := promptInput
+	promptInput = bufio.NewReader(strings.NewReader("/tmp/override\n"))
+	t.Cleanup(func() {
+		promptInput = previousInput
+	})
+
+	got, err := promptPathWithDefault("Workspace path: ", "/tmp/workspace")
+	if err != nil {
+		t.Fatalf("promptPathWithDefault() returned error: %v", err)
+	}
+	if got != "/tmp/override" {
+		t.Fatalf("promptPathWithDefault() = %q, want %q", got, "/tmp/override")
+	}
+}
+
+func TestDefaultWorkspacePromptPath(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	got := defaultWorkspacePromptPath()
+	want := filepath.Join(homeDir, "git")
+	if got != want {
+		t.Fatalf("defaultWorkspacePromptPath() = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultHarnessPromptPath(t *testing.T) {
+	got := defaultHarnessPromptPath("/tmp/workspace")
+	want := filepath.Join("/tmp/workspace", "harbour-harness")
+	if got != want {
+		t.Fatalf("defaultHarnessPromptPath() = %q, want %q", got, want)
+	}
+}
+
 func TestCompletePathCandidatesForAbsolutePath(t *testing.T) {
 	base := t.TempDir()
 	mustMkdirAll(t, filepath.Join(base, "alpha"))

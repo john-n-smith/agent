@@ -33,10 +33,7 @@ func run(args []string) error {
 		}
 		if exists {
 			cfg, err := loadConfig(false)
-			if err != nil {
-				return err
-			}
-			if cfg.DefaultCommand != "" {
+			if err == nil && canUseDefaultCommand(cfg) {
 				command = cfg.DefaultCommand
 			}
 		}
@@ -100,4 +97,15 @@ func requireNoArgs(args []string) error {
 		return nil
 	}
 	return fmt.Errorf("unexpected arguments: %v", args)
+}
+
+func canUseDefaultCommand(cfg Config) bool {
+	switch cfg.DefaultCommand {
+	case "agent", "yolo":
+		return cfg.WorkspacePath != "" && cfg.HarnessPath != "" && cfg.ActiveAgent != ""
+	case "shell":
+		return cfg.WorkspacePath != ""
+	default:
+		return false
+	}
 }

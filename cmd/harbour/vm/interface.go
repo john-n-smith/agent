@@ -32,6 +32,6 @@ func Resolve(cfg Config) (Backend, error) {
 	case "colima":
 		return Colima{cfg: cfg}, nil
 	default:
-		return nil, fmt.Errorf("unsupported vm_backend=%q (supported: colima)", cfg.Backend)
+		return nil, fmt.Errorf("Unsupported `vm_backend`=%q (supported: colima)", cfg.Backend)
 	}
 }

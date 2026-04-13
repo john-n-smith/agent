@@ -68,6 +68,102 @@ func TestRunUsesConfiguredDefaultCommand(t *testing.T) {
 	}
 }
 
+func TestRunFallsBackToHelpWhenConfigIsInvalid(t *testing.T) {
+	configDir := withTestConfigDir(t)
+	configPath := filepath.Join(configDir, "harbour", "config.json")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll() returned error: %v", err)
+	}
+	if err := os.WriteFile(configPath, []byte("{\"vm_backend\":\"\"}\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile() returned error: %v", err)
+	}
+
+	restore := stubRunAgent(func(yolo bool) error {
+		t.Fatal("runAgent should not be called for invalid config")
+		return nil
+	})
+	defer restore()
+
+	stdout, stderr := captureOutput(t, func() {
+		if err := run(nil); err != nil {
+			t.Fatalf("run(nil) returned error: %v", err)
+		}
+	})
+
+	if !strings.Contains(stdout, "Usage: harbour [command]") {
+		t.Fatalf("stdout did not contain help output:\n%s", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr was not empty:\n%s", stderr)
+	}
+}
+
+func TestRunFallsBackToHelpWhenConfigIsIncompleteForDefaultCommand(t *testing.T) {
+	withTestConfigDir(t)
+
+	cfg := defaultConfig()
+	cfg.DefaultCommand = "agent"
+	if err := saveConfig(cfg); err != nil {
+		t.Fatalf("saveConfig() returned error: %v", err)
+	}
+
+	restore := stubRunAgent(func(yolo bool) error {
+		t.Fatal("runAgent should not be called for incomplete config")
+		return nil
+	})
+	defer restore()
+
+	stdout, stderr := captureOutput(t, func() {
+		if err := run(nil); err != nil {
+			t.Fatalf("run(nil) returned error: %v", err)
+		}
+	})
+
+	if !strings.Contains(stdout, "Usage: harbour [command]") {
+		t.Fatalf("stdout did not contain help output:\n%s", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr was not empty:\n%s", stderr)
+	}
+}
+
+func TestRunProvisionRecoversFromInvalidConfig(t *testing.T) {
+	configDir := withTestConfigDir(t)
+	configPath := filepath.Join(configDir, "harbour", "config.json")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll() returned error: %v", err)
+	}
+	if err := os.WriteFile(configPath, []byte("{\"vm_backend\":\"\"}\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile() returned error: %v", err)
+	}
+
+	called := false
+	previous := runProvisionCommand
+	runProvisionCommand = func() error {
+		called = true
+		return nil
+	}
+	t.Cleanup(func() {
+		runProvisionCommand = previous
+	})
+
+	stdout, stderr := captureOutput(t, func() {
+		if err := run([]string{"provision"}); err != nil {
+			t.Fatalf("run(provision) returned error: %v", err)
+		}
+	})
+
+	if !called {
+		t.Fatal("runProvision was not called")
+	}
+	if stdout != "" {
+		t.Fatalf("stdout was not empty:\n%s", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("stderr was not empty:\n%s", stderr)
+	}
+}
+
 func TestExplicitHelpBypassesConfiguredDefaultCommand(t *testing.T) {
 	withTestConfigDir(t)
 
@@ -241,7 +337,7 @@ func TestSaveConfigRejectsInvalidValues(t *testing.T) {
 	if err == nil {
 		t.Fatal("saveConfig() returned nil error for invalid config")
 	}
-	if !strings.Contains(err.Error(), "active_agent must be codex, claude, or empty") {
+	if !strings.Contains(err.Error(), "`active_agent` must be codex, claude, or empty") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -256,7 +352,7 @@ func TestSaveConfigRejectsEmptyVMProfile(t *testing.T) {
 	if err == nil {
 		t.Fatal("saveConfig() returned nil error for invalid config")
 	}
-	if !strings.Contains(err.Error(), "vm_profile must not be empty") {
+	if !strings.Contains(err.Error(), "`vm_profile` must not be empty") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/agent-harbour/harbour/cmd/harbour/vm"
 )
@@ -110,12 +111,24 @@ func loadConfig(create bool) (Config, error) {
 
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return Config{}, fmt.Errorf("invalid Harbour config %s: %w", path, err)
+		return Config{}, fmt.Errorf("Invalid Harbour config %s: %w", path, err)
 	}
 	if err := validateConfig(cfg); err != nil {
-		return Config{}, fmt.Errorf("invalid Harbour config %s: %w", path, err)
+		return Config{}, fmt.Errorf("Invalid Harbour config %s: %w", path, err)
 	}
 	return cfg, nil
+}
+
+func loadConfigForProvision(cfgPath string) (Config, string, error) {
+	cfg, err := loadConfig(true)
+	if err == nil {
+		return cfg, "", nil
+	}
+	invalidPrefix := fmt.Sprintf("Invalid Harbour config %s: ", cfgPath)
+	if strings.HasPrefix(err.Error(), invalidPrefix) {
+		return defaultConfig(), strings.TrimPrefix(err.Error(), invalidPrefix), nil
+	}
+	return Config{}, "", err
 }
 
 func saveConfig(cfg Config) error {
@@ -158,44 +171,44 @@ func validateConfig(cfg Config) error {
 	switch cfg.VMBackend {
 	case "colima":
 	default:
-		return fmt.Errorf("unsupported vm_backend=%q (supported: colima)", cfg.VMBackend)
+		return fmt.Errorf("Unsupported `vm_backend`=%q (supported: colima)", cfg.VMBackend)
 	}
 	if cfg.VMProfile == "" {
-		return fmt.Errorf("vm_profile must not be empty")
+		return fmt.Errorf("`vm_profile` must not be empty")
 	}
 	if cfg.VMRuntime == "" {
-		return fmt.Errorf("vm_runtime must not be empty")
+		return fmt.Errorf("`vm_runtime` must not be empty")
 	}
 	if cfg.VMType == "" {
-		return fmt.Errorf("vm_type must not be empty")
+		return fmt.Errorf("`vm_type` must not be empty")
 	}
 	if cfg.VMArch == "" {
-		return fmt.Errorf("vm_arch must not be empty")
+		return fmt.Errorf("`vm_arch` must not be empty")
 	}
 	if cfg.VMMountType == "" {
-		return fmt.Errorf("vm_mount_type must not be empty")
+		return fmt.Errorf("`vm_mount_type` must not be empty")
 	}
 
 	switch cfg.ActiveAgent {
 	case "", "codex", "claude":
 	default:
-		return fmt.Errorf("active_agent must be codex, claude, or empty")
+		return fmt.Errorf("`active_agent` must be codex, claude, or empty")
 	}
 
 	switch cfg.DefaultCommand {
 	case "", "agent", "shell", "yolo":
 	default:
-		return fmt.Errorf("default_command must be agent, shell, yolo, or empty")
+		return fmt.Errorf("`default_command` must be agent, shell, yolo, or empty")
 	}
 
 	if cfg.VMCPU <= 0 {
-		return fmt.Errorf("vm_cpu must be positive")
+		return fmt.Errorf("`vm_cpu` must be positive")
 	}
 	if cfg.VMMemory <= 0 {
-		return fmt.Errorf("vm_memory must be positive")
+		return fmt.Errorf("`vm_memory` must be positive")
 	}
 	if cfg.VMDisk <= 0 {
-		return fmt.Errorf("vm_disk must be positive")
+		return fmt.Errorf("`vm_disk` must be positive")
 	}
 	return nil
 }
