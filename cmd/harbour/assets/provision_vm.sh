@@ -48,9 +48,44 @@ sync_skills() {
   fi
 }
 
-if ! command -v make >/dev/null 2>&1 || ! command -v rg >/dev/null 2>&1 || ! command -v gh >/dev/null 2>&1 || ! command -v file >/dev/null 2>&1; then
+harness_dir=$(dirname "${harbour_harness_agents_path}")
+harness_packages_file="${harness_dir}/apt-packages.txt"
+
+required_packages=(file gh make ripgrep)
+harness_packages=()
+if [[ -f "${harness_packages_file}" ]]; then
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    line="${line%%#*}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    if [[ -n "${line}" ]]; then
+      harness_packages+=("${line}")
+    fi
+  done < "${harness_packages_file}"
+fi
+
+all_packages=("${required_packages[@]}" "${harness_packages[@]}")
+missing_packages=()
+for pkg in "${all_packages[@]}"; do
+  if ! dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q '^install ok installed$'; then
+    missing_packages+=("${pkg}")
+  fi
+done
+
+if (( ${#missing_packages[@]} > 0 )); then
   sudo apt-get update
-  sudo apt-get install -y file gh make ripgrep
+  sudo apt-get install -y "${missing_packages[@]}"
+fi
+
+harness_provision_hook="${harness_dir}/provision.sh"
+if [[ -f "${harness_provision_hook}" ]]; then
+  echo "Running harness provision hook: ${harness_provision_hook}"
+  hook_status=0
+  bash "${harness_provision_hook}" || hook_status=$?
+  if (( hook_status != 0 )); then
+    echo "WARNING: harness provision hook exited ${hook_status}: ${harness_provision_hook}" >&2
+    echo "WARNING: continuing provisioning without it; re-run 'harbour provision' to retry." >&2
+  fi
 fi
 
 if [[ ! -f "${harbour_harness_agents_path}" ]]; then
