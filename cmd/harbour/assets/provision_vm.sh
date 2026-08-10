@@ -11,6 +11,7 @@ workspace_path=$8
 
 agent_bin_dir="${HOME}/.local/bin"
 codex_path="${agent_bin_dir}/codex"
+codex_code_mode_host_path="${agent_bin_dir}/codex-code-mode-host"
 claude_path="${agent_bin_dir}/claude"
 codex_agents_path="${HOME}/.codex/AGENTS.md"
 claude_agents_path="${HOME}/.claude/CLAUDE.md"
@@ -24,10 +25,14 @@ case "${arch}" in
   aarch64|arm64)
     archive_name="codex-aarch64-unknown-linux-musl.tar.gz"
     binary_name="codex-aarch64-unknown-linux-musl"
+    code_mode_host_archive_name="codex-code-mode-host-aarch64-unknown-linux-musl.tar.gz"
+    code_mode_host_binary_name="codex-code-mode-host-aarch64-unknown-linux-musl"
     ;;
   x86_64|amd64)
     archive_name="codex-x86_64-unknown-linux-musl.tar.gz"
     binary_name="codex-x86_64-unknown-linux-musl"
+    code_mode_host_archive_name="codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz"
+    code_mode_host_binary_name="codex-code-mode-host-x86_64-unknown-linux-musl"
     ;;
   *)
     echo "Unsupported VM architecture: ${arch}" >&2
@@ -79,12 +84,22 @@ case "${selected_agent}" in
     fi
 
     url="https://github.com/openai/codex/releases/download/rust-v${version}/${archive_name}"
+    code_mode_host_url="https://github.com/openai/codex/releases/download/rust-v${version}/${code_mode_host_archive_name}"
 
     echo "Target Codex version: ${version}"
-    if [[ "${current_version}" != "${version}" ]]; then
+    if [[ "${current_version}" != "${version}" ||
+          ! -x "${codex_path}" ||
+          ! -x "${codex_code_mode_host_path}" ]]; then
       curl -fsSL "${url}" -o "${tmpdir}/codex.tar.gz"
+      curl -fsSL "${code_mode_host_url}" -o "${tmpdir}/codex-code-mode-host.tar.gz"
+
       tar -xzf "${tmpdir}/codex.tar.gz" -C "${tmpdir}"
+      tar -xzf "${tmpdir}/codex-code-mode-host.tar.gz" -C "${tmpdir}"
+
       install -m 0755 "${tmpdir}/${binary_name}" "${codex_path}"
+      install -m 0755 \
+        "${tmpdir}/${code_mode_host_binary_name}" \
+        "${codex_code_mode_host_path}"
     fi
 
     rm -f "${claude_path}"
@@ -111,7 +126,7 @@ case "${selected_agent}" in
       curl -fsSL https://claude.ai/install.sh | bash -s "${version}"
     fi
 
-    rm -f "${codex_path}"
+    rm -f "${codex_path}" "${codex_code_mode_host_path}"
     mkdir -p "$(dirname "${claude_agents_path}")"
     ln -sfn "${harbour_harness_agents_path}" "${claude_agents_path}"
     sync_skills "${claude_skills_dir}"
